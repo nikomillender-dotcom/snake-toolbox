@@ -9,3 +9,9 @@ public/pyodide/
 # Playwright test results
 test-results/
 playwright-report/
+
+.vercel
+.env*
+
+# Worktree/agent machinery, never a committed artifact.
+.claude/

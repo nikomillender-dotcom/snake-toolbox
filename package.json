@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "worker-guard": "node scripts/worker-boundary-guard.mjs",
+    "test:live": "playwright test --config=playwright.live.config.ts",
     "postinstall": "node scripts/copy-pyodide-assets.mjs",
     "no-mock-guard": "node scripts/no-mock-in-prod-guard.mjs",
     "lint:dash": "python \"C:/Users/meowr/OneDrive/Documents/sub-agents/tools/dash_guard.py\""

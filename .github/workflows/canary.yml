@@ -45,11 +45,10 @@ jobs:
     name: Live smoke test against the deployed URL (Playwright, headless)
     runs-on: ubuntu-latest
     needs: engine-verify
-    # PENDING (documented in .github/workflows/README.md): this job has no deployed URL to test
-    # against yet (Edelgard's integration + Vercel deploy have not landed). It is authored and
-    # reviewed now so it ships as a KNOWN, reviewed shape, but is gated off until
-    # vars.DEPLOYED_URL is configured, so an unconfigured canary reports "skipped," never a false
-    # red X that trains everyone to ignore it.
+    # Gated behind vars.DEPLOYED_URL being configured, so an unconfigured canary reports
+    # "skipped," never a false red X that trains everyone to ignore it. Now real: DEPLOYED_URL is
+    # set (https://snake-toolbox.vercel.app), and the live spec lives in e2e-live/live-smoke.spec.ts
+    # (playwright.live.config.ts), run here via `npm run test:live`.
     if: vars.DEPLOYED_URL != ''
     env:
       DEPLOYED_URL: ${{ vars.DEPLOYED_URL }}
@@ -60,18 +59,10 @@ jobs:
           node-version: "24"
       - name: npm ci
         run: npm ci
-      - name: Live smoke checks
-        run: |
-          echo "Would run against $DEPLOYED_URL:"
-          echo "  (a) app boots and the boot self-check (I4) passes"
-          echo "  (b) crossOriginIsolated === true"
-          echo "  (c) a trivial run executes end to end (print('ok') -> OutputStream shows ok)"
-          echo "  (d) a MOCK ship DRY-RUNS through the GitHubSync path (build tree/commit objects"
-          echo "      in memory, assert their shape) WITHOUT publishing; no PAT is used or needed."
-          echo "This step is a placeholder until the frontend + composition root exist"
-          echo "(Edelgard's integration). The Playwright script itself is Edelgard's to author"
-          echo "against the real DOM/service worker; this job's SHAPE (trigger, permissions,"
-          echo "gating, failure -> issue) is what Hubert owns and ships now."
+      - name: Install Playwright's Chromium (with OS deps)
+        run: npx playwright install chromium --with-deps
+      - name: Live smoke checks against DEPLOYED_URL
+        run: npm run test:live
 
   alarm-on-failure:
     name: Open (or re-open) a de-duped issue on failure

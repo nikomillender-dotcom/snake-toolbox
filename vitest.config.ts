@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./tests/setup.ts"],
     css: false,
-    exclude: ["e2e/**", "node_modules/**"],
+    exclude: ["e2e/**", "e2e-live/**", "node_modules/**"],
     // Engine tests that do not need DOM run fine under jsdom; engine modules never import
     // preact/JSX, so the Preact alias does not interfere.
   },
