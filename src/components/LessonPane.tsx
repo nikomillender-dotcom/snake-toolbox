@@ -59,6 +59,11 @@ function FillBlankCapture({
 
   const prompt = step.prompt ?? "";
   const match = prompt.match(/_+/);
+  // SF3 (Frederick full-gate should-fix): these attributes turn off spellcheck/autocorrect/auto-
+  // capitalize/browser autofill, but none of them disable iOS Safari's Smart Punctuation (there is
+  // no HTML attribute that does). A typed straight quote can still become a curly quote here. The
+  // actual fix is grader-side: gradeAnswer.gradeFillBlank normalizes smart punctuation back to
+  // straight quotes/hyphens on BOTH sides before comparing.
   const chip = (
     <input
       ref={inputRef}
@@ -100,9 +105,13 @@ function McqCapture({
   const choices = step.choices ?? [];
   const showedAWrongPick = !!localGrade && !localGrade.passed;
   const revealCorrect = showedAWrongPick && mcqRevealsAnswer(missCount);
+  // N3 (Frederick full-gate nit): the radiogroup used to repeat the prompt as BOTH aria-label and
+  // this visible <p>, so a screen reader announced it twice. aria-labelledby points at the visible
+  // text instead, one source of truth, one announcement.
+  const promptId = `mcq-prompt-${step.id}`;
   return (
-    <div role="radiogroup" aria-label={step.prompt ?? "Choose one"} style={{ margin: "12px 0" }}>
-      <p class="prose">{step.prompt}</p>
+    <div role="radiogroup" aria-labelledby={promptId} style={{ margin: "12px 0" }}>
+      <p id={promptId} class="prose">{step.prompt ?? "Choose one"}</p>
       {choices.map((choice, i) => {
         const isSelected = selected === i;
         const looksLikeCode = !/\s/.test(choice.trim()) && choice.trim().length > 0;

@@ -91,6 +91,20 @@ describe("gatherBackupFiles (B14 v6)", () => {
     expect(result.skipped).toEqual([{ path: "huge_notes.txt", reason: "overTotalCap", sizeBytes: 70 }]);
   });
 
+  // B1 fix (Frederick full-gate blocker): entropy is scoped to TEXT content; a binary FileBlob
+  // (stored as `.bytes`) is never excluded just because its raw-byte latin1 projection happens to
+  // look statistically high-entropy. Prevents the "quieter durability gap" Frederick flagged: a
+  // legit binary silently excluded as a false "secret."
+  it("does NOT exclude a binary file whose raw bytes happen to look like a high-entropy run (entropy scoped to text)", async () => {
+    const highEntropyLooking = "aZ9k2mQ8pXw3vB7nR4tY6uL1sD0fG5hJ2kM"; // would trip entropy if scanned as text
+    const bytes = new TextEncoder().encode(highEntropyLooking);
+    const store = await storeWith([{ path: "resource.bin", blob: { path: "resource.bin", bytes, encoding: "binary" } }]);
+    const result = await gatherBackupFiles(store);
+    expect(result.skipped).toEqual([]);
+    expect(result.files).toHaveLength(1);
+    expect(result.files[0]!.path).toBe("resource.bin");
+  });
+
   it("D5: a per-file secret hit EXCLUDES just that file, never the whole gather", async () => {
     const store = await storeWith([
       { path: "leak.py", blob: { path: "leak.py", text: "TOKEN='ghp_1234567890abcdefghijklmnopqrstuvwxyzAB'", encoding: "utf8" } },

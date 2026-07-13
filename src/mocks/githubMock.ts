@@ -30,6 +30,11 @@ export interface MockGitHubConfig {
   tokenExpiryScenario?: TokenExpiryScenario;
   restoreSnapshot?: ProgressBackup | null;
   lastBackupAt?: { at: number; ok: boolean } | null;
+  // SF4 (Frederick full-gate should-fix): lets a test inject a realistic backup/restore file
+  // report, mirroring the real client's v6 non-contract lastBackupSkippedFiles()/
+  // lastRestoreFileReport() surface (see githubSyncClient.ts). Defaults to "nothing to report".
+  backupFileSkips?: Array<{ path: string; reason: string; sizeBytes: number }>;
+  restoreFileReport?: { written: string[]; skipped: string[] };
 }
 
 const SECRET_PATTERNS: Array<{ re: RegExp; kind: ScanResult["hits"][number]["kind"] }> = [
@@ -93,7 +98,14 @@ export function createMockGitHubAuth(config: MockGitHubConfig = {}): GitHubAuth 
 export function createMockGitHubSync(config: MockGitHubConfig = {}): GitHubSync {
   let queue: Artifact[] = [];
 
-  return {
+  // SF4: built as an unannotated local (same "widen past the frozen interface, then return the
+  // wider object" technique githubSyncClient.ts's real createGitHubSync uses, see its own comment)
+  // so this mock can ALSO carry the two v6 non-contract reporting methods without TypeScript's
+  // excess-property check on a literal returned directly against the `: GitHubSync` annotation
+  // below rejecting them. Any caller typed against `GitHubSync` sees exactly the frozen surface;
+  // ProgressScreen's SF4 UI casts to the wider shape on purpose, the same posture the real client
+  // documents.
+  const sync = {
     scanArtifact(artifact: Artifact): ScanResult {
       return scanArtifactForSecrets(artifact);
     },
@@ -164,8 +176,17 @@ export function createMockGitHubSync(config: MockGitHubConfig = {}): GitHubSync 
     },
     async lastBackup() {
       return config.lastBackupAt ?? null;
-    }
+    },
+    // SF4: additive, outside the frozen GitHubSync interface, see the comment above.
+    async lastBackupSkippedFiles() {
+      return config.backupFileSkips ?? [];
+    },
+    async lastRestoreFileReport() {
+      return config.restoreFileReport ?? { written: [], skipped: [] };
+    },
   };
+
+  return sync;
 }
 
 export const FIXTURE_RESTORE_SNAPSHOT: ProgressBackup = {

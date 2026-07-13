@@ -34,6 +34,18 @@ async function connect(auth: ReturnType<typeof createGitHubAuth>, api: FakeGitHu
   if (!result.ok) throw new Error("test setup: connect failed");
 }
 
+// Deterministic pseudo-random bytes (a tiny LCG), so the "realistic high-entropy binary" regression
+// test below is reproducible: no reliance on Math.random, no flakiness, same bytes every run.
+function pseudoRandomBytes(n: number, seed = 0x9e3779b9): Uint8Array {
+  let state = seed >>> 0;
+  const bytes = new Uint8Array(n);
+  for (let i = 0; i < n; i += 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    bytes[i] = state & 0xff;
+  }
+  return bytes;
+}
+
 function artifact(overrides: Partial<Artifact> = {}): Artifact {
   return {
     folderPath: "m1-variables",
@@ -502,6 +514,43 @@ describe("GitHubSyncClient backup/restore Sandbox files (B14 v6, DESIGN v0.4.3)"
     const report = await sync.lastRestoreFileReport();
     expect(report.written).toEqual(["main.py"]);
     expect(report.skipped).toEqual([]);
+  });
+
+  // B1 regression test (Frederick full-gate BLOCKER): a real binary Sandbox file used to make
+  // attemptBackupOnce THROW (not even queue) because the whole-payload D5 scan re-scanned the
+  // already-per-file-scanned base64 file content, and base64 of any non-trivial binary is a long
+  // run of mixed-case alphanumeric characters that trips the entropy heuristic. Drives a realistic
+  // (>=24 random bytes, PNG-magic-prefixed) high-entropy binary through the FULL
+  // backupProgress -> restoreProgress round trip and proves it: (a) does not throw, (b) actually
+  // saves rather than silently swallowing into "queued", (c) is not falsely reported as skipped,
+  // and (d) round-trips byte-for-byte through restore.
+  it("B1: a realistic high-entropy binary Sandbox file backs up and restores, does not throw or get refused", async () => {
+    const { api, auth, sync, store } = setup();
+    await connect(auth, api);
+
+    const pngMagic = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]; // 8 bytes
+    const randomTail = pseudoRandomBytes(300); // realistic size, well over the 24-byte floor
+    const binary = new Uint8Array(pngMagic.length + randomTail.length);
+    binary.set(pngMagic, 0);
+    binary.set(randomTail, pngMagic.length);
+    await store.put("files", "sprite.png", { path: "sprite.png", bytes: binary, encoding: "binary" });
+
+    // Must not throw (the pre-fix regression), and must actually reach "saved".
+    await expect(sync.backupProgress(backup())).resolves.toEqual(
+      expect.objectContaining({ status: "saved" }),
+    );
+
+    // The binary must not be falsely excluded as a "secret" either (the quieter durability gap
+    // Frederick also flagged for the per-file entropy heuristic).
+    const skips = await sync.lastBackupSkippedFiles();
+    expect(skips).toEqual([]);
+
+    const restored = await sync.restoreProgress();
+    const file = restored!.files.find((f) => f.path === "sprite.png");
+    expect(file).toBeDefined();
+    expect(file!.encoding).toBe("base64");
+    const decoded = Uint8Array.from(atob(file!.content), (c) => c.charCodeAt(0));
+    expect(Array.from(decoded)).toEqual(Array.from(binary));
   });
 
   it("v6 back-compat: a pre-v6 snapshot with no `files` field restores unchanged (files defaults to [])", async () => {

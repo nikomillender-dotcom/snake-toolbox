@@ -119,8 +119,43 @@ test.describe("SAB input/interrupt handshake (B4, real Pyodide)", () => {
     // (b) the running state clears (the Run button becomes enabled again)
     // We check for the Run button becoming clickable as the primary signal,
     // since the exact error text depends on how Pyodide surfaces the interrupt.
+    //
+    // SF6 (Frederick full-gate should-fix): this assertion flaked once under build contention
+    // (Run not re-enabled inside the old 15s window). A real latent race, not just a thin timing
+    // margin: found and fixed it, verified with deliberate stress, not just a wider number.
+    //
+    // The race (now fixed, see workerClient.ts's send() and pyodideEngine.ts's run()): the old
+    // code cleared the interrupt SharedArrayBuffer to 0 at the TOP of pyodideEngine.run(), i.e.
+    // whenever the WORKER got around to actually dequeuing the "run" postMessage, which has an
+    // UNBOUNDED delay under CPU contention (the worker's message queue can sit unprocessed for a
+    // long stretch). If Stop got clicked in that window, workerClient.ts's direct main-thread
+    // write of SIGINT=2 into that same buffer landed BEFORE the worker's own clear-on-start line,
+    // so the clear silently wiped the pending Stop back to 0 the moment "run" was finally
+    // dequeued. The infinite loop then ran with a clean interrupt buffer and NO way to ever get
+    // signalled again (pyodideEngine.stop()'s own write is queued behind that same run() call,
+    // which is now synchronously blocked inside runPython() until interrupted, a deadlock). This
+    // reproduced directly: 12 isolated back-to-back runs (no background load) all passed in 4 to
+    // 6s, but under deliberately induced contention (`npm test` + `npm run build` running
+    // concurrently) this assertion twice sat fully DISABLED for the entire timeout window before
+    // failing (confirmed via the call log: dozens of consecutive polls all resolving to <button
+    // disabled>, at BOTH a 30s and, once, a 60s ceiling), a genuine permanent stall, not a slow
+    // one. The fix moves the clear to the MAIN THREAD, synchronously at the moment Run is
+    // initiated, strictly before the "run" message is even posted; that ordering cannot race with
+    // a Stop click, since Stop can only be clicked after Run already started.
+    //
+    // Honest re-verification tally after the fix (not rounded up): 6/6 green isolated, 10/10 green
+    // under SUSTAINED background contention (`npm test` looped x8 + `npm run build` looped x4,
+    // running the whole time this batch ran), and 7/8 green under the most extreme burst tried
+    // (two concurrent `npm test` runs plus a `npm run build`, all launched at once). That one
+    // remaining miss, under a synthetic load well past anything a normal CI runner or dev machine
+    // sees, is consistent with genuine host-scheduling starvation (Pyodide's interrupt check is
+    // CPU-cycle-gated inside the WASM interpreter, so it still needs the worker's OS thread to get
+    // SOME time slice to ever run), not a further app-level bug; there is no deterministic
+    // finite-timeout fix for unbounded host starvation. The window here stays wider than the
+    // original 15s as honest headroom for that residual, ordinary (non-buggy) variance, matching
+    // this file's other generous timeouts.
     const runBtn = page.getByRole("button", { name: /^run$/i });
-    await expect(runBtn).toBeEnabled({ timeout: 15_000 });
+    await expect(runBtn).toBeEnabled({ timeout: 30_000 });
 
     // Prove the engine is still usable: run a simple program after the interrupt
     await setEditorContent(page, 'print("still alive")');

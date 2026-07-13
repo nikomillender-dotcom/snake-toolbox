@@ -57,6 +57,57 @@ export function BackupNudge({ connected, lastBackupDaysAgo, onConnect, onExportZ
   );
 }
 
+// SF4 (Frederick full-gate should-fix): the engine already tracks WHICH files a backup/restore
+// skipped and WHY (githubSyncClient.ts's lastBackupSkippedFiles()/lastRestoreFileReport(), a v6
+// non-contract addition), but nothing surfaced it to the user; a file excluded for a secret false
+// positive or a size cap was silently absent with no way to know. This card is that surface: a
+// calm, honest count + reason, matching the same skin as BackupNudge/BackupStatus right above it.
+// Says nothing at all when there is nothing to report (no new noise on the common, all-clear day).
+export interface BackupFileReportProps {
+  // Duck-typed against BackupFileSkip (gatherBackupFiles.ts) / RestoreFilesReport
+  // (restoreBackupFiles.ts) without importing those engine-only types into a UI component; `reason`
+  // is narrowed to a string literal union there, which is assignable here.
+  backupSkips: Array<{ path: string; reason: string; sizeBytes: number }>;
+  restoreSkippedPaths: string[];
+}
+
+const BACKUP_SKIP_REASON_LABEL: Record<string, string> = {
+  secretDetected: "looked like it held a secret or token",
+  overPerFileCap: "too large to back up on its own",
+  overTotalCap: "the backup was full, this one did not fit",
+};
+
+export function BackupFileReport({ backupSkips, restoreSkippedPaths }: BackupFileReportProps) {
+  if (backupSkips.length === 0 && restoreSkippedPaths.length === 0) return null;
+
+  // Group backup skips by reason, so "3 files, same reason" reads as one honest line, not three.
+  const countByReason = new Map<string, number>();
+  for (const skip of backupSkips) {
+    countByReason.set(skip.reason, (countByReason.get(skip.reason) ?? 0) + 1);
+  }
+
+  return (
+    <div class="card" role="status" style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", color: "var(--dim)" }}>
+      {backupSkips.length > 0 && (
+        <div>
+          <b style={{ color: "var(--ink)" }}>{backupSkips.length} file{backupSkips.length === 1 ? "" : "s"}</b> skipped on the last backup:
+          <ul style={{ margin: "4px 0 0", paddingLeft: "18px" }}>
+            {[...countByReason.entries()].map(([reason, count]) => (
+              <li key={reason}>{count} {BACKUP_SKIP_REASON_LABEL[reason] ?? reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {restoreSkippedPaths.length > 0 && (
+        <div>
+          <b style={{ color: "var(--ink)" }}>{restoreSkippedPaths.length} file{restoreSkippedPaths.length === 1 ? "" : "s"}</b> from
+          your other device {restoreSkippedPaths.length === 1 ? "was" : "were"} left alone on restore: a local copy already existed here.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export interface StorageMeterProps {
   usageBytes: number;
   quotaBytes: number;

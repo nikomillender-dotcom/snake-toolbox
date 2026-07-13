@@ -5,11 +5,21 @@ import { PromotionCutscene } from "../components/PromotionCutscene";
 import { ReviewHand } from "../components/ReviewHand";
 import { GlossaryScreen } from "./GlossaryScreen";
 import { ConceptMap, PortfolioShelf, ProjectLadder, type LadderRung, type PortfolioEntry } from "../components/ConceptMapAndLadder";
-import { BackupNudge, InstallHint, StorageMeter } from "../components/Durability";
+import { BackupFileReport, BackupNudge, InstallHint, StorageMeter } from "../components/Durability";
 import { BackupStatus, RestoreSheet, TokenExpiryBanner } from "../components/RestoreAndExpiry";
 import { GitHubConnectSheet } from "../components/GitHubConnectSheet";
 import { ThemePicker } from "../components/ThemePicker";
 import type { GlossaryView, PhaseId } from "../contracts";
+
+// SF4 (Frederick full-gate should-fix): lastBackupSkippedFiles()/lastRestoreFileReport() are v6
+// non-contract additions on the concrete githubSync object (see githubSyncClient.ts's own comment
+// for why they sit outside the frozen GitHubSync interface, I10). This local widened type mirrors
+// that same, already-adjudicated posture on the UI side: the object really carries these methods
+// at runtime; only the STATIC type this screen is handed needs widening to call them.
+type GitHubSyncWithFileReports = GitHubSync & {
+  lastBackupSkippedFiles(): Promise<Array<{ path: string; reason: string; sizeBytes: number }>>;
+  lastRestoreFileReport(): Promise<{ written: string[]; skipped: string[] }>;
+};
 
 export interface DurabilityFacts {
   installed: boolean;
@@ -57,6 +67,10 @@ export function ProgressScreen({
   const [appTheme, setAppTheme] = useState<"dark" | "light">("dark");
   const [installDismissed, setInstallDismissed] = useState(false);
   const [connected, setConnected] = useState(false);
+  // SF4: honest counts + reasons for files a backup/restore skipped, surfaced from the engine's
+  // v6 non-contract reporting methods (see the GitHubSyncWithFileReports comment above).
+  const [backupSkips, setBackupSkips] = useState<Array<{ path: string; reason: string; sizeBytes: number }>>([]);
+  const [restoreSkippedPaths, setRestoreSkippedPaths] = useState<string[]>([]);
   // H2 (Simbo's visual-quality checklist, "exactly ONE hero focal point per screen"): Progress
   // originally stacked the Stat Sheet, Concept Map, Project Ladder, Portfolio Shelf, Glossary, and
   // Backup/Settings onto one long scroll, which reads flat rather than as one hero per view.
@@ -68,8 +82,23 @@ export function ProgressScreen({
 
   useEffect(() => {
     void reviewScheduler.dueCount(Date.now()).then(setDueCount);
+    void refreshFileReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // SF4: pulls the most recent backup-skip / restore-skip reports and puts them in state. Called
+  // on mount (so the tab is honest about whatever happened earlier this session) and again right
+  // after a restore (below), since that is the one point in this screen that already triggers a
+  // real githubSync call.
+  async function refreshFileReports() {
+    const withReports = githubSync as GitHubSyncWithFileReports;
+    const [skips, restoreReport] = await Promise.all([
+      withReports.lastBackupSkippedFiles(),
+      withReports.lastRestoreFileReport(),
+    ]);
+    setBackupSkips(skips);
+    setRestoreSkippedPaths(restoreReport.skipped);
+  }
 
   async function drawHand() {
     const items = await reviewScheduler.getDueReviews(Date.now(), 8);
@@ -91,6 +120,7 @@ export function ProgressScreen({
       }
       const expiry = await githubAuth.tokenExpiry();
       setTokenExpiry(expiry);
+      await refreshFileReports(); // SF4: pick up whatever this restore attempt just reported
     }
     return result;
   }
@@ -135,6 +165,7 @@ export function ProgressScreen({
           <section aria-label="Backup and storage" class="card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
             <BackupNudge connected={connected} lastBackupDaysAgo={connected ? 1 : null} onConnect={() => setConnectOpen(true)} onExportZip={() => {}} />
             <BackupStatus lastBackup={connected ? { at: Date.now() - 86400000, ok: true } : null} />
+            <BackupFileReport backupSkips={backupSkips} restoreSkippedPaths={restoreSkippedPaths} />
             <StorageMeter usageBytes={12_500_000} quotaBytes={1_000_000_000} />
           </section>
 

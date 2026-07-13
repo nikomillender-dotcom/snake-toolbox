@@ -51,14 +51,31 @@ export function initialAnswerFor(step: Step): AnswerState {
 }
 
 // ============================================================================
+// SF3 (Frederick full-gate should-fix): iOS Safari's Smart Punctuation rewrites a typed straight
+// quote/dash into its "smart" curly/en-dash form as the learner types. No HTML input/textarea
+// attribute disables this (there is no such attribute; PredictionField/FillBlankCapture's old
+// comments claiming otherwise were wrong and are corrected below). On an iPad, a correct answer
+// like {'a': 2} can get typed as {'a': 2} with curly quotes and grade as WRONG. Normalize both
+// sides of every comparison instead: curly single/double quotes -> straight, en/em dash -> hyphen.
+// ============================================================================
+
+function normalizeSmartPunctuation(s: string): string {
+  return s
+    .replace(/[‘’‚‛]/g, "'") // curly single quotes, low-9 variants -> straight '
+    .replace(/[“”„‟]/g, '"') // curly double quotes, low-9 variants -> straight "
+    .replace(/[–—]/g, "-"); // en dash (U+2013), em dash (U+2014) -> hyphen
+}
+
+// ============================================================================
 // G2: normalizeOutput, stated precisely, applied to BOTH sides before comparison.
 // ============================================================================
 
 export function normalizeOutput(s: string): string {
-  let out = s.replace(/\r\n?/g, "\n"); // 1. line endings
-  out = out.split("\n").map((line) => line.replace(/[ \t]+$/, "")).join("\n"); // 2. per-line trailing whitespace
-  out = out.replace(/\n+$/, ""); // 3. trailing blank lines / final newline
-  return out; // 4. leading + internal whitespace left untouched, deliberately
+  let out = normalizeSmartPunctuation(s); // 1. iOS Smart Punctuation: curly quotes/dashes -> straight (SF3)
+  out = out.replace(/\r\n?/g, "\n"); // 2. line endings
+  out = out.split("\n").map((line) => line.replace(/[ \t]+$/, "")).join("\n"); // 3. per-line trailing whitespace
+  out = out.replace(/\n+$/, ""); // 4. trailing blank lines / final newline
+  return out; // 5. leading + internal whitespace left untouched, deliberately
 }
 
 /** G15: makes whitespace visible in the actual-vs-expected diff (a middot for space, a return glyph
@@ -180,7 +197,10 @@ export function mcqRevealsAnswer(missCount: number): boolean {
 export function gradeFillBlank(answer: string, step: Step, priorMisses: number): LocalGradeResult {
   const expected = (step.expected ?? "").trim();
   const trimmed = answer.trim();
-  if (trimmed === expected) {
+  // SF3: normalize smart punctuation on BOTH sides right before the comparison. `expected` and
+  // `message` below stay built from the original authored/typed strings (already straight
+  // punctuation in practice), so the displayed hint text is unaffected.
+  if (normalizeSmartPunctuation(trimmed) === normalizeSmartPunctuation(expected)) {
     return { passed: true, message: "Nice. Step cleared." };
   }
   const missNumber = priorMisses + 1;

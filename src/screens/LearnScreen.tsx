@@ -341,11 +341,21 @@ function LessonPlayer({
   // empty-code hidden test for these kinds is GONE (that was the hole this round closes).
   function checkGraded() {
     if (route === "hiddenTest") {
+      // SF1 (Frederick full-gate should-fix): a hidden-test-route step (writeStub/fixBug/boss)
+      // with no real hiddenTests must NEVER fabricate an empty-code test. pyodideEngine.check runs
+      // `runPython("")` for an empty test, which never throws, so an empty test always reports
+      // "passed: true", a vacuous auto-pass. bundleValidator now rejects this shape for any
+      // authored (non-placeholder) module at load time; this is the runtime backstop for the same
+      // hole, routed the same honest way route "none" already is.
+      if (!step.hiddenTests || step.hiddenTests.length === 0) {
+        setEmptyNudge("This step cannot be graded yet.");
+        return;
+      }
       const runId = nextRunId();
       gradedRunId.current = runId;
       setRunning(true);
       setEmptyNudge(null);
-      const hiddenTests: HiddenTest[] = step.hiddenTests ?? [{ id: "default", code: "", message: "your output should match the brief" }];
+      const hiddenTests: HiddenTest[] = step.hiddenTests;
       worker.send({ t: "check", runId, code, mountFiles: [], hiddenTests });
       return;
     }
@@ -494,17 +504,18 @@ function LessonPlayer({
                   </div>
                 )}
                 <OutputStream items={items} activeInputRequest={activeInput} onInputSubmit={submitInput} />
-                {checkOutcome && (
-                  <CheckResult
-                    passed={checkOutcome.passed}
-                    results={checkOutcome.results}
-                    hints={step.hints ?? []}
-                    modelSolution={step.modelSolution}
-                    yourCode={code}
-                    onOpenInSandbox={() => onOpenInSandbox?.(code)}
-                    onNext={() => setStepIndex(i => Math.min(i + 1, lesson.steps.length - 1))}
-                  />
-                )}
+                {/* SF5: CheckResult is ALWAYS mounted (never gated behind `checkOutcome &&`), so
+                    its role="status" region is already in the DOM before the content it needs to
+                    announce ever changes; see CheckResult.tsx's own comment for why. */}
+                <CheckResult
+                  outcome={checkOutcome}
+                  stepId={step.id}
+                  hints={step.hints ?? []}
+                  modelSolution={step.modelSolution}
+                  yourCode={code}
+                  onOpenInSandbox={() => onOpenInSandbox?.(code)}
+                  onNext={() => setStepIndex(i => Math.min(i + 1, lesson.steps.length - 1))}
+                />
               </>
             )}
           </div>

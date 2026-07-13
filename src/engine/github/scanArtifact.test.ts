@@ -84,6 +84,23 @@ describe("scanArtifact (F2 BLOCKER)", () => {
     const result = scanArtifact(artifact([{ path: "leak.bin", bytes, encoding: "binary" }]));
     expect(result.clean).toBe(false);
   });
+
+  // B1 fix (Frederick full-gate blocker): entropy scoped to TEXT content only, both layers.
+  it("does NOT flag an entropy hit on bytes-sourced content, even the SAME run of characters that trips entropy as text", () => {
+    // This exact string is the one used above in "flags a generic high-entropy string..."; as
+    // `.text` it trips entropy (proven below), but a real binary FileBlob is stored as `.bytes`,
+    // and raw binary bytes routinely produce a run like this by pure chance, so entropy must not
+    // fire on the bytes-sourced path (only the literal-prefix checks stay active there).
+    const highEntropyLooking = "aZ9k2mQ8pXw3vB7nR4tY6uL1sD0fG5hJ2kM";
+    const bytes = new TextEncoder().encode(highEntropyLooking);
+
+    const asBytes = scanArtifact(artifact([{ path: "resource.bin", bytes, encoding: "binary" }]));
+    expect(asBytes.hits.some((h) => h.kind === "entropy")).toBe(false);
+    expect(asBytes.clean).toBe(true);
+
+    const asText = scanArtifact(artifact([{ path: "resource.py", text: highEntropyLooking, encoding: "utf8" }]));
+    expect(asText.hits.some((h) => h.kind === "entropy")).toBe(true);
+  });
 });
 
 describe("scanSerializedPayload (D5 runtime gate for backupProgress)", () => {

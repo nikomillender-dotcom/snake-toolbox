@@ -75,6 +75,21 @@ export function createWorkerClient(): WorkerClient {
         }
       }
 
+      // SF6 (Frederick full-gate should-fix): clear the interrupt buffer HERE, synchronously on
+      // the main thread, at the moment a new run is actually initiated, strictly before the "run"
+      // message is even posted. This used to happen worker-side, inside pyodideEngine.run(), which
+      // opened a real race: the worker's postMessage queue can sit unprocessed for a long stretch
+      // under CPU contention, and if the user clicked Stop in that window (writing SIGINT=2
+      // directly into this same buffer below), the worker-side clear would silently overwrite it
+      // back to 0 the moment "run" was finally dequeued, permanently losing the Stop for that run
+      // (see pyodideEngine.ts's run() comment for the full trace). Clearing here instead cannot
+      // race with a Stop click: Stop can only be clicked by the user AFTER Run was already
+      // initiated, and this thread is single-threaded, so "clear, then post run" is atomic with
+      // respect to any later click handler.
+      if (msg.t === "run" && interruptView) {
+        Atomics.store(interruptView, 0, 0);
+      }
+
       // B4: inputResponse writes directly to the SAB and notifies the blocked worker.
       // The worker is blocked on Atomics.wait in the stdin callback and cannot process
       // postMessage, so we bypass the message queue entirely.

@@ -345,8 +345,22 @@ export class PyodideEngine implements PythonEngine {
       this.clearGradingDir();
       this.mountFiles(params.mountFiles, GRADING_DIR);
     }
-    // Clear the interrupt buffer before each run so a stale SIGINT does not kill it
-    if (this.interruptView) Atomics.store(this.interruptView, 0, 0);
+    // SF6 (Frederick full-gate should-fix, a real latent race found under host CPU contention
+    // during E2E stress testing, not just a timing margin): the interrupt buffer is NO LONGER
+    // cleared here. Clearing it on the WORKER side, at the moment this run() call actually starts
+    // executing, has an unbounded delay relative to when the main thread POSTED the "run" message
+    // (the worker's postMessage queue can sit unprocessed for an arbitrary stretch under CPU
+    // contention). If the user clicks Stop in that window, workerClient.ts writes SIGINT=2
+    // directly into this SAME SharedArrayBuffer slot (a main-thread write, since the worker may be
+    // too busy/delayed to process a posted "stop" message promptly); this line used to then
+    // unconditionally overwrite that 2 back to 0 the moment "run" was finally dequeued, silently
+    // erasing a Stop that was already in flight for THIS run, with no other mechanism able to ever
+    // re-arm it (pyodideEngine.stop()'s own write is queued behind this same synchronous,
+    // now-uninterruptible runPython() call). The infinite loop then runs forever. The clear now
+    // happens on the MAIN THREAD instead, synchronously at the moment Run is clicked, strictly
+    // BEFORE the "run" message is even posted (see workerClient.ts's send()); that ordering can
+    // never race with a Stop click, since Stop can only be clicked by the user after Run already
+    // started, so the buffer is guaranteed clear before this run's lifecycle can produce a Stop.
     this.currentHooks = params.hooks;
     this.currentRunId = params.runId;
     const globals = this.globalsFor(params.namespace);

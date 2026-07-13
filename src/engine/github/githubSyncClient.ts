@@ -232,7 +232,20 @@ export function createGitHubSync(deps: GitHubSyncDeps, queue: OfflineQueue = cre
     const fullSnapshot: ProgressBackup = { ...snapshot, files: gathered.files };
 
     const serialized = JSON.stringify(fullSnapshot);
-    const scan = scanSerializedPayload(serialized);
+    // B1 fix (Frederick full-gate blocker): scan the snapshot with `files` EMPTIED, not the full
+    // payload. gatherBackupFiles.ts:91 already ran the F2 scan on every surviving file's ORIGINAL
+    // pre-base64 content (scanFileBlobHits, text-scoped entropy); re-scanning the same content here
+    // a second time, after it has been base64-encoded into BackupFile.content, is both redundant
+    // AND actively harmful: base64 of any non-trivial binary is a long run of mixed-case
+    // alphanumeric characters, which used to trip the entropy heuristic and refuse the ENTIRE
+    // backup (v6 regression of working v5 behavior, since v5's snapshot never carried `files` at
+    // all). Chose "scan with files emptied" over "special-case encoding === 'base64' inside the
+    // entropy sweep" because it needs no encoding-awareness in the generic scanner at all: the
+    // per-file scan is already the single source of truth for file-content secrets, so the
+    // whole-payload gate's only remaining job is the non-file fields (settings/nodes/reviews/
+    // profile), exactly what it was scanning pre-v6.
+    const scanTarget = JSON.stringify({ ...fullSnapshot, files: [] });
+    const scan = scanSerializedPayload(scanTarget);
     if (!scan.clean) {
       // D5: the F2 scan is a RUNTIME GATE on backup, not a fixture nicety. Refuse the write hard.
       throw new Error(`scanArtifact found secrets in the progress snapshot; backup refused: ${JSON.stringify(scan.hits)}`);

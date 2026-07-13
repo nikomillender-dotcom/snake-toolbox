@@ -3,7 +3,7 @@
 // every awardMap key matches a real module/boss, lesson and step ids are unique,
 // every COMPLETION_EMITTING_KINDS step in a strand-fed module carries strand.
 // Loud failure with the exact bad id.
-import type { CurriculumBundle, Module } from "../contracts";
+import type { CurriculumBundle, Module, StepKind } from "../contracts";
 import { COMPLETION_EMITTING_KINDS } from "../contracts";
 
 export interface BundleValidationError {
@@ -18,15 +18,33 @@ const STRAND_FED: ReadonlySet<string> = new Set(["debug", "tests", "read"]);
 // terms. Machine-detectable so validation can tell "not written yet" apart from "broken."
 const PLACEHOLDER_SENTINEL = "PLACEHOLDER:";
 
-/** Sentinel-aware skeleton detection. A module is a placeholder skeleton if any of its steps is a
- *  "prose" step whose body begins with the PLACEHOLDER: sentinel. Skeleton modules are EXEMPT from
+/** Sentinel-aware skeleton detection. A module is a placeholder skeleton ONLY if it is WHOLLY a
+ *  skeleton: it carries the PLACEHOLDER: sentinel somewhere AND has zero completion-emitting
+ *  steps, zero terms, and no boss, anywhere in the module. Skeleton modules are EXEMPT from
  *  authored-content requirements (a boss / graded gate); every other module is "authored" and IS
- *  held to those requirements. This exemption is scoped to the sentinel only, never widened. */
+ *  held to those requirements.
+ *
+ *  SF2 (Frederick full-gate should-fix): tightened from "ANY step carries the sentinel" (a
+ *  `.some()`) to this whole-skeleton shape. The old check let a SINGLE stray `PLACEHOLDER:` prose
+ *  step exempt an otherwise fully authored module (real emitting steps, real terms, or a real
+ *  boss) from the authored-boss gate below, a silent authoring-mistake vector, not an exploit (the
+ *  curriculum is trusted authored content), but a real hole. This exemption is scoped to the
+ *  sentinel AND the whole-skeleton shape together, never widened further. */
 export function isPlaceholderModule(mod: Module): boolean {
-  return mod.lessons.some((lesson) =>
+  const hasSentinel = mod.lessons.some((lesson) =>
     lesson.steps.some((step) => step.kind === "prose" && typeof step.body === "string" && step.body.startsWith(PLACEHOLDER_SENTINEL)),
   );
+  if (!hasSentinel) return false;
+  const hasEmittingStep = mod.lessons.some((lesson) => lesson.steps.some((step) => COMPLETION_EMITTING_KINDS.has(step.kind)));
+  const hasTerms = mod.terms.length > 0;
+  const hasBoss = mod.boss != null;
+  return !hasEmittingStep && !hasTerms && !hasBoss;
 }
+
+// SF1 (Frederick full-gate should-fix): the three Step kinds that route to the worker-run
+// hidden-test path (LearnScreen.checkGraded / gradeAnswer.graderRouteFor's HIDDEN_TEST_KINDS,
+// kept in sync by hand since gradeAnswer.ts is a UI-lib module bundleValidator does not import).
+const HIDDEN_TEST_STEP_KINDS: ReadonlySet<StepKind> = new Set<StepKind>(["writeStub", "fixBug", "boss"]);
 
 export function validateBundle(bundle: CurriculumBundle): BundleValidationError[] {
   const errors: BundleValidationError[] = [];
@@ -117,6 +135,27 @@ export function validateBundle(bundle: CurriculumBundle): BundleValidationError[
         path: `module/${mod.id}`,
         message: `authored module "${mod.id}" has no boss (a real module needs its graded gate; only a PLACEHOLDER: skeleton is exempt)`,
       });
+    }
+  }
+
+  // SF1 (Frederick full-gate should-fix): a hidden-test-route step (writeStub/fixBug/boss) in a
+  // NON-placeholder module must carry real hiddenTests. LearnScreen.checkGraded used to fabricate
+  // a single empty-code test when hiddenTests was missing, and pyodideEngine.check reports an
+  // empty test `passed: true` (runPython("") never throws), so a missing hiddenTests array is a
+  // vacuous auto-pass, not a "not yet written" state. The runtime now also refuses to fabricate
+  // that test (LearnScreen.tsx checkGraded), but this load-time gate is the authoritative check:
+  // it catches the mistake at authoring/build time, in a bundle a reviewer can actually read.
+  for (const mod of bundle.modules) {
+    if (isPlaceholderModule(mod)) continue; // a skeleton has no real steps to check yet, by design
+    for (const lesson of mod.lessons) {
+      for (const step of lesson.steps) {
+        if (HIDDEN_TEST_STEP_KINDS.has(step.kind) && (!step.hiddenTests || step.hiddenTests.length === 0)) {
+          errors.push({
+            path: `module/${mod.id}/lesson/${lesson.id}/step/${step.id}`,
+            message: `hidden-test-route step "${step.id}" (kind: ${step.kind}) has empty or missing hiddenTests (would vacuously auto-pass, SF1)`,
+          });
+        }
+      }
     }
   }
 

@@ -79,6 +79,25 @@ describe("normalizeOutput (G2)", () => {
   it("the load-bearing example from the Manager's brief: internal space is significant", () => {
     expect(normalizeOutput("{'a': 2}")).not.toBe(normalizeOutput("{'a':2}"));
   });
+
+  // SF3 (Frederick full-gate should-fix): iOS Safari's Smart Punctuation rewrites a typed straight
+  // quote/dash into a curly quote/en dash as the learner types; no HTML attribute disables this.
+  // normalizeOutput must fold it back so a genuinely correct prediction still grades correct.
+  it("normalizes curly single quotes (iOS Smart Punctuation) to straight quotes", () => {
+    expect(normalizeOutput("{‘a’: 2, ‘b’: 1}")).toBe("{'a': 2, 'b': 1}");
+  });
+  it("normalizes curly double quotes (iOS Smart Punctuation) to straight quotes", () => {
+    expect(normalizeOutput("print(“hi”)")).toBe('print("hi")');
+  });
+  it("normalizes en dash and em dash (iOS Smart Punctuation) to a plain hyphen", () => {
+    expect(normalizeOutput("range 5–9")).toBe("range 5-9");
+    expect(normalizeOutput("a — b")).toBe("a - b");
+  });
+  it("a prediction typed with smart quotes matches the straight-quote expected output", () => {
+    const smartTyped = "{‘a’: 2, ‘b’: 1}"; // what iOS actually inserts
+    const authoredExpected = "{'a': 2, 'b': 1}"; // what the curriculum authors in straight quotes
+    expect(normalizeOutput(smartTyped)).toBe(normalizeOutput(authoredExpected));
+  });
 });
 
 describe("visualizeWhitespace", () => {
@@ -221,6 +240,22 @@ describe("gradeFillBlank (G9)", () => {
     const s = step({ kind: "fillBlank", expected: "None" });
     const r = gradeFillBlank("none", s, 2);
     expect(r.message).toMatch(/"None"/);
+  });
+
+  // SF3 (Frederick full-gate should-fix): iOS Safari's Smart Punctuation can rewrite a typed
+  // straight quote/dash into a curly quote/en dash. A fillBlank answer typed on an iPad must still
+  // grade correct against a straight-quote/hyphen authored `expected`.
+  it("a curly single quote typed on iOS still matches a straight-quote expected token", () => {
+    const s = step({ kind: "fillBlank", expected: "'q'" });
+    expect(gradeFillBlank("‘q’", s, 0).passed).toBe(true);
+  });
+  it("a curly double quote typed on iOS still matches a straight-quote expected token", () => {
+    const s = step({ kind: "fillBlank", expected: '"q"' });
+    expect(gradeFillBlank("“q”", s, 0).passed).toBe(true);
+  });
+  it("an en dash typed on iOS still matches a hyphen-expected token", () => {
+    const s = step({ kind: "fillBlank", expected: "well-formed" });
+    expect(gradeFillBlank("well–formed", s, 0).passed).toBe(true);
   });
 });
 

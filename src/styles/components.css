@@ -79,6 +79,12 @@
    OutputStream so it reads as "what the stage would show") ---- */
 .predict-console { background: var(--console-bg); margin: 12px; border-radius: 10px; border: 1px solid var(--line); flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .predict-textarea { flex: 1; width: 100%; background: transparent; border: 0; outline: none; resize: none; color: var(--console-fg, var(--ink)); font-family: var(--font-mono); font-size: 15px; line-height: 1.6; padding: 0 14px 14px; caret-color: var(--pink); }
+/* N2 (Frederick full-gate nit): an explicit placeholder color instead of the browser default, at
+   8.7:1 against --console-bg (#0E0C0B), comfortably over 4.5:1. Reuses --dim, the app's existing
+   "supplementary label" token (see .dim-label right above this field), rather than inventing a
+   new color. The visible "your prediction" label plus the field's own aria-label already carry
+   the real accessible name, so the placeholder text is supplementary, not the only label. */
+.predict-textarea::placeholder { color: var(--dim); opacity: 1; }
 
 /* ---- mcq capture (G6): large touch rows, single-select, calm never-color-alone marks (G7) ---- */
 .mcq-row { display: flex; align-items: center; gap: 10px; min-height: var(--target-min); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin: 6px 0; cursor: pointer; }

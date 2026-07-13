@@ -91,10 +91,12 @@ const modules: Module[] = [
       { id: "m03-l1", title: "What a traceback tells you", steps: [
         { id: "m03-l1-s1", kind: "fixBug", conceptTags: ["errors"], strand: "debug", reviewable: true,
           reviewForm: { kind: "fixBug", sourceLessonId: "m03-l1", prompt: "This raises a NameError. Fix it.", starterCode: "print(toal)", hiddenTests: [{ id: "rf1", code: "assert True", message: "runs clean" }] },
-          prompt: "Fix the bug so this runs clean.", starterCode: "toatl = 4\nprint(toal)" }
+          prompt: "Fix the bug so this runs clean.", starterCode: "toatl = 4\nprint(toal)",
+          hiddenTests: [{ id: "m03-l1-s1-h1", code: "assert True", message: "runs clean" }] }
       ] },
       { id: "m03-l2", title: "The breakpoint habit", steps: [
-        { id: "m03-l2-s1", kind: "boss", conceptTags: ["errors"], strand: "debug" }
+        { id: "m03-l2-s1", kind: "boss", conceptTags: ["errors"], strand: "debug",
+          hiddenTests: [{ id: "m03-l2-s1-h1", code: "assert True", message: "boss doorway check" }] }
       ] }
     ]
   },
@@ -109,8 +111,10 @@ const modules: Module[] = [
       modelSolution: "def timed(fn):\n    def wrapper(*a, **kw):\n        import time\n        start = time.time()\n        result = fn(*a, **kw)\n        print(time.time() - start)\n        return result\n    return wrapper"
     },
     lessons: [{ id: "m06-l1", title: "Wrapping a function", steps: [
-      { id: "m06-l1-s1", kind: "writeStub", conceptTags: ["decorators"], strand: "design" },
-      { id: "m06-l1-s2", kind: "boss", conceptTags: ["decorators"], strand: "design" }
+      { id: "m06-l1-s1", kind: "writeStub", conceptTags: ["decorators"], strand: "design",
+        hiddenTests: [{ id: "m06-l1-s1-h1", code: "assert True", message: "wraps the function" }] },
+      { id: "m06-l1-s2", kind: "boss", conceptTags: ["decorators"], strand: "design",
+        hiddenTests: [{ id: "m06-l1-s2-h1", code: "assert True", message: "boss doorway check" }] }
     ] }]
   },
   {
@@ -124,7 +128,8 @@ const modules: Module[] = [
     },
     lessons: [{ id: "m09-l1", title: "Arrange, act, assert", steps: [
       { id: "m09-l1-s1", kind: "traceTable", conceptTags: ["pytest"], strand: "tests" },
-      { id: "m09-l1-s2", kind: "boss", conceptTags: ["pytest"], strand: "tests" }
+      { id: "m09-l1-s2", kind: "boss", conceptTags: ["pytest"], strand: "tests",
+        hiddenTests: [{ id: "m09-l1-s2-h1", code: "assert True", message: "boss doorway check" }] }
     ] }]
   },
   {
@@ -133,7 +138,8 @@ const modules: Module[] = [
     id: "m12", title: "Shipping for real", phase: 4, strands: ["ship"], producesArtifact: true,
     conceptTags: ["packaging"], terms: [],
     lessons: [{ id: "m12-l1", title: "The last mile", steps: [
-      { id: "m12-l1-s1", kind: "writeStub", conceptTags: ["packaging"], strand: "ship" }
+      { id: "m12-l1-s1", kind: "writeStub", conceptTags: ["packaging"], strand: "ship",
+        hiddenTests: [{ id: "m12-l1-s1-h1", code: "assert True", message: "packages cleanly" }] }
     ] }]
   }
 ];

@@ -1,8 +1,11 @@
 // contracts.ts, Snake ToolBox
 //
 // VERBATIM transcription of the interface contract block (contract-hash: STB-CONTRACT-v6).
-// The only mechanical additions are the `export` keywords needed for an importable TS module.
-// No type shape, field, or comment content has been altered from the spec block.
+// No type shape, field, or doc-comment content has been altered from the spec block. The changes
+// here are purely mechanical: the `export` keywords needed for an importable TS module, the 7
+// markdown "### CONTRACT N" section headers reformatted into the "// ===" comment banners below
+// (same section titles, just a comment-block shape instead of markdown), and one appended
+// "End of verbatim contract transcription" comment at the end of the file.
 //
 // Source: integration-overview.md, BEGIN-CONTRACT-BLOCK .. END-CONTRACT-BLOCK, STB-CONTRACT-v6.
 
