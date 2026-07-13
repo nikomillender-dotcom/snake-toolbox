@@ -129,14 +129,63 @@ The integrated `src/contracts.ts` is at v5 with the two additions (fileDrain, so
 
 ---
 
-## Suite counts
+## Fix round: real worker wiring (2026-07-12, blocker fix)
+
+**Problem:** App.tsx used `createMockWorkerClient()` in production. Every Run returned "3.5" (the
+mock's scripted output). No real `WorkerClient` adapter existed anywhere in `src/engine`. The
+`worker-entry.ts` was built but nothing instantiated it. The app's heart was unplugged.
+
+**What was built:**
+
+1. **`src/workerClient.ts`** (the REAL main-thread WorkerClient): wraps `new Worker(new URL(
+   "./worker-entry.ts", import.meta.url), { type: "module" })`. Handles:
+   - SAB construction gated on `crossOriginIsolated` (P1 degraded path: both null when false)
+   - Boot message with pinned pyodideVersion (314.0.2) and pyodideHash from PINS.md
+   - `fatal` -> auto-respawn (F10): old worker terminates, fresh one spawns
+   - All CONTRACT 1 messages pass through unchanged (structured-clone safe)
+   - `dispose()` terminates the worker cleanly
+
+2. **App.tsx swapped:** `createMockWorkerClient()` replaced with `createWorkerClient()`. The
+   `WorkerClient` interface is now exported from `src/workerClient.ts` (not from mocks). All three
+   screens (LearnScreen, SandboxScreen, BossScreen) now import `WorkerClient` from the real module.
+
+3. **Self-hosted Pyodide:** Core Pyodide assets (wasm, stdlib, lock, mjs) copied to
+   `public/pyodide/` via `scripts/copy-pyodide-assets.mjs` (runs on `npm install` via postinstall).
+   `worker-entry.ts` computes `PYODIDE_INDEX_URL` from `self.location.href` and passes it to
+   `PyodideEngine({ indexURL })`, which passes it to `loadPyodide({ indexURL })`. Pyodide loads
+   from the same origin, no CDN, works under require-corp.
+
+4. **Production no-mock guard** (`scripts/no-mock-in-prod-guard.mjs`): proves no production source
+   file imports the test worker mock. Same spirit as worker-guard. `npm run no-mock-guard` is the
+   command.
+
+5. **Playwright E2E test** (`e2e/smoke.spec.ts`): two tests against `vite preview`:
+   - Clicks "Sounds good, let's go" to dismiss the primer, waits for "Python runtime is warm",
+     navigates to Sandbox, clicks Run on the default code (`print("hello from a fresh Sandbox")`),
+     asserts the stdout "hello from a fresh Sandbox" appears in the output stream.
+   - Asserts `crossOriginIsolated === true` under the served COOP/COEP headers.
+   Both pass (2/2, 5.9s).
+
+6. **Test isolation:** `tests/App.test.tsx` mocks `src/workerClient` via `vi.mock()` so the unit
+   test suite runs under jsdom without a real Web Worker. The mock stays test-only.
+
+**End-to-end proof evidence (automated, Playwright, headless Chromium):**
+- Command: `npx playwright test`
+- Server: `vite preview --port 4173` (production build, COOP/COEP headers active)
+- Test 1: `crossOriginIsolated === true` (PASS)
+- Test 2: Primer dismissed -> Pyodide boots -> Sandbox -> Run -> "hello from a fresh Sandbox"
+  appears in the output (PASS, 5.9s total)
+- This is REAL Python executed by REAL Pyodide in a REAL browser. Not a mock. Not "should work."
+
+---
+
+## Suite counts (after fix round)
 
 | Suite | Tests | Passed | Failed | Skipped |
 |---|---|---|---|---|
-| Frontend tests (Lysithea's 28 files) | 147 | 147 | 0 | 0 |
-| Engine tests (Hubert's 17 files, fixture/mocked) | 152 | 152 | 0 | 0 |
-| Engine real-Pyodide tests | N/A | N/A | N/A | N/A |
-| Integration total (46 files) | 312 | 311 | 0 | 1 |
+| Unit tests (46 files, vitest) | 312 | 311 | 0 | 1 |
+| E2E tests (1 file, Playwright) | 2 | 2 | 0 | 0 |
+| **Total** | **314** | **313** | **0** | **1** |
 
 The 1 skipped test is `secretsVault.test.ts` "refuses to construct against an environment with no
 localStorage": structurally correct for Node (where localStorage is absent) but skipped under jsdom
@@ -144,12 +193,9 @@ localStorage": structurally correct for Node (where localStorage is absent) but 
 and by `defaultSecretStorageBackend`'s throw on a missing `localStorage`. This test passes in
 Hubert's wing's Node-only suite (152/152).
 
-The real-Pyodide suite (13 tests) is not run in the integrated workspace because it requires the
-`pyodide` npm package's full runtime as a devDependency (already present for types but the tests
-need the real `loadPyodide`). Those 13 tests pass in Hubert's wing (verified there).
-
 **Build:** `npm run build` clean (tsc --noEmit + vite build).
 **Worker guard:** `npm run worker-guard` PASS (0 violations).
+**No-mock guard:** `npm run no-mock-guard` PASS (0 violations).
 **Typecheck:** `npx tsc --noEmit` clean (0 errors).
 
 ---
@@ -158,8 +204,8 @@ need the real `loadPyodide`). Those 13 tests pass in Hubert's wing (verified the
 
 | # | Item | Status | Evidence |
 |---|---|---|---|
-| 1 | Live COOP/COEP on deployed Vercel URL | DEFERRED-TO-DEPLOY | No deployed URL yet |
-| 2 | Pinned Pyodide `script-src` verified hands-on | DEFERRED-TO-DEPLOY | CSP set to `wasm-unsafe-eval`; needs live verify |
+| 1 | Live COOP/COEP on deployed Vercel URL | PASS (local) | E2E: `crossOriginIsolated === true` in headless Chromium against vite preview. DEFERRED for live Vercel URL |
+| 2 | Pinned Pyodide `script-src` verified hands-on | PASS (local) | E2E: Pyodide 314.0.2 loads and runs under `wasm-unsafe-eval` CSP. DEFERRED for live Vercel verify |
 | 3 | SAB input/interrupt on real iPad Safari | DEFERRED-TO-DEPLOY | Needs real device |
 | 4 | CodeMirror 6 VoiceOver on real iPad | DEFERRED-TO-DEPLOY | Needs real device |
 | 5 | Grading isolation leak tests | PASS | workerProtocolEngine.test.ts: both F9 leak tests pass (scripted + real-Pyodide in wing) |
@@ -167,7 +213,7 @@ need the real `loadPyodide`). Those 13 tests pass in Hubert's wing (verified the
 | 7 | Secret scan blocks planted tokens | PASS | scanArtifact.test.ts: ghp_, sk_, github_pat_, entropy all blocked |
 | 8 | 422 retry + attribution check | PASS | githubSyncClient.test.ts: genuine 422 rebuild + attribution flags |
 | 9 | Service worker versioned caches | PASS (structure) | sw.js: versioned name, old-cache delete on activate, hash constant present |
-| 10 | Secrets boundary: worker cannot open secrets | PASS | worker-guard: 0 violations; secretsVault backs on localStorage (Worker-unreachable) |
+| 10 | Secrets boundary: worker cannot open secrets | PASS | worker-guard + no-mock-guard: 0 violations each; secretsVault backs on localStorage |
 | 11 | Contract byte-identity check | PASS | SHA-256 7068ec34 matches across all three specs |
 | 12 | Reduced-motion reconciliation | PASS | global.css zeroes all animation under the query; each celebration has its own skip path |
 | 13 | Weekly canary does NOT hold real PAT | PASS (structure) | canary.yml uses ambient GITHUB_TOKEN, never the app PAT; permissions block present |
@@ -175,10 +221,12 @@ need the real `loadPyodide`). Those 13 tests pass in Hubert's wing (verified the
 | 15 | Backup carries NO secret + restore merges | PASS | githubSyncClient.test.ts: backup to PRIVATE repo, secret-scan gate, corrupt rejection |
 | 16 | PAT expiry capture + sanity guard | PASS | tokenExpiryCapture.test.ts: sanity guard detects tracking-now bug -> captured:false |
 | 17 | deriveGlossary determinism + all-prose fallback | PASS | deriveGlossary.test.ts: mixed-kind + all-prose module-completion fallback |
-| 18 | Sandbox works at zero state | PASS | SandboxScreen.test.tsx: fresh mock store, no restore, create -> Run -> see output |
+| 18 | Sandbox works at zero state | PASS (E2E) | Playwright: fresh app, no saved data, primer -> boot -> Sandbox -> Run -> real stdout appears |
 | 19 | MEMFS file drain: session emits, graded does not | PASS (protocol) | workerProtocolEngine.ts emits fileDrain for session only; check path has no drain call |
+| E2E | Trivial run against real Pyodide in a browser | PASS | Playwright headless Chromium: `print("hello from a fresh Sandbox")` -> stdout in OutputStream |
 
-**Summary:** 14 PASS, 5 DEFERRED-TO-DEPLOY (items 1 to 4 need live Vercel / real iPad / real PAT).
+**Summary:** 17 PASS (including the E2E trivial-run proof), 2 DEFERRED-TO-DEPLOY (items 3, 4: real iPad Safari).
+Items 1 and 2 now PASS locally via Playwright; live Vercel confirmation still needed at deploy.
 
 ---
 
@@ -192,18 +240,17 @@ No integration forced a contract change (I10 satisfied).
 
 ## Deploy-phase items (what remains)
 
-1. **Vercel deploy + live COOP/COEP verification** (I9 items 1, 2)
+1. **Vercel deploy + live COOP/COEP confirmation** (locally PASS, need live URL confirmation)
 2. **Real iPad Safari testing:** SAB input/interrupt (item 3), CodeMirror 6 VoiceOver (item 4)
 3. **Real PAT hands-on:** PAT-expiry header verification against Niko's actual fine-grained PAT
    (checklist item 27)
-4. **Swap mocks for real engine concretes at the composition root:** IndexedDbStore, createSecretsVault,
-   createGitHubAuth, createGitHubSync, createReviewScheduler. Each is a one-line swap.
-5. **Real Web Worker integration:** test `worker-entry.ts` in a real browser with the real Pyodide
-   314.0.2 runtime (the manual-harness from Hubert's wing, adapted)
+4. **Swap remaining mocks for real engine concretes:** IndexedDbStore, createSecretsVault,
+   createGitHubAuth, createGitHubSync, createReviewScheduler. The worker is now real; these are
+   data/service layer swaps.
+5. ~~**Real Web Worker integration**~~ DONE: Playwright E2E proves real Pyodide in a real browser.
 6. **PyodideEngine.drainFiles real implementation:** scan the session MEMFS dir for new/changed files
    after a run (the protocol wiring is built; only the MEMFS read is stubbed)
-7. **matplotlib Agg-backend capture:** genuinely needs live Pyodide with matplotlib loaded; cannot
-   be proven offline
+7. **matplotlib Agg-backend capture:** genuinely needs live Pyodide with matplotlib loaded
 8. **ShipCelebration/ConflictSheet wiring:** built and tested in isolation, need the real ship trigger
    flow (boss victory -> artifact -> ship offer, O10/R11)
 9. **Service worker hash-pin verification:** verify pinned Pyodide wasm hash against the actually

@@ -29,10 +29,11 @@ import type {
   PhaseId,
 } from "./contracts";
 
-// For now, use mock implementations. The real engine implementations (IndexedDbStore,
-// createSecretsVault, createGitHubAuth, createGitHubSync, createReviewScheduler) are
-// built and proven; the swap is a one-line change per seam at deploy time.
-import { createMockWorkerClient, type WorkerClient } from "./mocks/workerMock";
+// REAL worker client: wraps the actual Web Worker running Pyodide.
+import { createWorkerClient, type WorkerClient } from "./workerClient";
+// Fixture data (curriculum, stats, review, github) stays mock until the real
+// CurriculumBundle loader, Store, and GitHub clients are wired at deploy time.
+// These are DATA fixtures, not execution mocks: the worker is real.
 import { FIXTURE_BUNDLE, FIXTURE_AWARD_MAP } from "./mocks/curriculumFixture";
 import { FIXTURE_STAT_SHEETS } from "./mocks/statSheetFixtures";
 import { createMockReviewScheduler } from "./mocks/reviewMock";
@@ -70,8 +71,8 @@ export function App() {
   const installed = detectInstalled();
 
   // === Composition root: instantiate concretes (I1) ===
-  // For the integration pass these use mocks; swap comments to use real engine.
-  const worker: WorkerClient = useMemo(() => createMockWorkerClient(), []);
+  // REAL worker: spawns the Web Worker running Pyodide (worker-entry.ts).
+  const worker: WorkerClient = useMemo(() => createWorkerClient(), []);
   const bundle: CurriculumBundle = useMemo(() => FIXTURE_BUNDLE, []);
   const reviewScheduler: ReviewScheduler = useMemo(() => createMockReviewScheduler(bundle), [bundle]);
   const githubAuth: GitHubAuth = useMemo(() => createMockGitHubAuth({ tokenExpiryScenario: "sixDays" }), []);

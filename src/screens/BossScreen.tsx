@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { WorkerClient } from "../mocks/workerMock";
+import type { WorkerClient } from "../workerClient";
 import type { Boss, TestOutcome } from "../contracts";
 import { CodeEditor, type CodeEditorHandle } from "../components/CodeEditor";
 import { RunBar } from "../components/RunBar";

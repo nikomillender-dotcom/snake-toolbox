@@ -129,6 +129,10 @@ async function defaultLoadWasmBytes(): Promise<Uint8Array> {
 export interface PyodideEngineOptions {
   /** Injectable so a real browser Worker can supply a fetch-based loader (see defaultLoadWasmBytes). */
   loadWasmBytes?: () => Promise<Uint8Array>;
+  /** The URL directory containing the self-hosted Pyodide assets (wasm, stdlib, lock).
+   *  Passed to loadPyodide({ indexURL }) so the browser Worker fetches from the same origin
+   *  rather than the default CDN. Required for require-corp COEP compliance. */
+  indexURL?: string;
 }
 
 export class PyodideEngine implements PythonEngine {
@@ -160,8 +164,15 @@ export class PyodideEngine implements PythonEngine {
       }
     }
 
-    const pyodideModule = (await import("pyodide")) as unknown as { loadPyodide: () => Promise<MinimalPyodide> };
-    this.pyodide = await pyodideModule.loadPyodide();
+    const pyodideModule = (await import("pyodide")) as unknown as {
+      loadPyodide: (opts?: { indexURL?: string }) => Promise<MinimalPyodide>;
+    };
+    // When indexURL is set (browser Worker context), loadPyodide fetches wasm + stdlib
+    // from that same-origin path instead of the default CDN. This is required for
+    // require-corp COEP compliance and offline operation.
+    this.pyodide = await pyodideModule.loadPyodide(
+      this.options.indexURL ? { indexURL: this.options.indexURL } : undefined
+    );
     this.pyodide.runPython(BOOTSTRAP_PY);
     this.pyodide.runPython("_capture_pristine()");
     this.scratchGlobals = this.pyodide.toPy({});

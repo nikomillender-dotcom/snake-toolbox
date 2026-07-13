@@ -3,3 +3,9 @@ dist/
 *.log
 .DS_Store
 .env
+# Pyodide core assets: copied from node_modules/pyodide/ at install time.
+# Reproduced from the pinned npm dep (314.0.2), not checked into git (~13MB).
+public/pyodide/
+# Playwright test results
+test-results/
+playwright-report/

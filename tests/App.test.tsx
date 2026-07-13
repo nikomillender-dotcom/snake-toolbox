@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/preact";
+import { createMockWorkerClient } from "../src/mocks/workerMock";
+
+// Mock the real worker client so tests run under jsdom (no Web Worker support).
+// The mock returns the scripted workerMock instead of spawning a real Worker.
+vi.mock("../src/workerClient", () => ({
+  createWorkerClient: () => createMockWorkerClient(),
+}));
+
 import { App } from "../src/App";
 
 // App, the composition root smoke test: every surface reachable, the FirstLoadPrimer gates the
