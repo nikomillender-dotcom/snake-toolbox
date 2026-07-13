@@ -5,7 +5,10 @@ import { IconLock } from "../components/icons";
 // GlossaryScreen, L13/CONTRACT 7: reads deriveGlossary's output only. D13 accessibility: a real
 // semantic list, each unlocked entry a labelled link, each locked entry announced as "locked, not
 // yet discovered" (never a bare visual blur a screen reader skips), search results announce a
-// count, the silhouette bar is aria-hidden, the lock glyph is the sole visual "locked" cue.
+// count, the silhouette bar is aria-hidden. The locked state is conveyed by the visible "N locked"
+// section heading, the lock glyph (rendered at 3:1+ contrast via --dim on --panel), and the
+// visually-hidden screen reader text. (N5 fix: the comment previously overstated the lock glyph
+// as the "sole" visual cue; the heading carries the primary visible locked indicator.)
 
 export interface GlossaryScreenProps {
   view: GlossaryView;

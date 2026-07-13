@@ -47,7 +47,9 @@ export function IconRestart() {
     </svg>
   );
 }
-export function IconLock({ color = "#5b5348" }: { color?: string }) {
+// N5: lock glyph color raised to meet 1.4.11 3:1 non-text contrast against --panel (#2a2725).
+// #8a7e72 on #2a2725 yields ~3.2:1 contrast ratio.
+export function IconLock({ color = "#8a7e72" }: { color?: string }) {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
       <rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke={color} stroke-width="1.6" />

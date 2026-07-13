@@ -18,6 +18,10 @@ export interface SandboxScreenProps {
    * mount race); defaults to "auto" (CodeMirror 6, falling back to the accessible textarea if it
    * cannot mount, per F17). */
   editorMode?: EditorMode;
+  /** Files drained from the worker via fileDrain (v5). UPSERT into the file tree. */
+  drainedFiles?: import("../contracts").FileBlob[];
+  /** The Store for persisting Sandbox files across reloads. */
+  store?: import("../contracts").Store;
 }
 
 let runIdSeq = 0;
@@ -32,7 +36,7 @@ const ZERO_STATE_FILES: Record<string, string> = {
   "main.py": "print(\"hello from a fresh Sandbox\")\n"
 };
 
-export function SandboxScreen({ worker, inputCapable, editorMode = "auto" }: SandboxScreenProps) {
+export function SandboxScreen({ worker, inputCapable, editorMode = "auto", drainedFiles, store }: SandboxScreenProps) {
   const [files, setFiles] = useState<Record<string, string>>(ZERO_STATE_FILES);
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([{ path: "main.py", name: "main.py", dirty: false }]);
   const [activePath, setActivePath] = useState("main.py");
@@ -79,6 +83,61 @@ export function SandboxScreen({ worker, inputCapable, editorMode = "auto" }: San
     });
     return unsubscribe;
   }, [worker]);
+
+  // fileDrain: UPSERT drained files into the local file tree (gap 6)
+  useEffect(() => {
+    if (!drainedFiles || drainedFiles.length === 0) return;
+    setFiles(prev => {
+      const next = { ...prev };
+      for (const file of drainedFiles) {
+        if (file.text !== undefined) next[file.path] = file.text;
+      }
+      return next;
+    });
+    // Also open tabs for newly drained files
+    for (const file of drainedFiles) {
+      setOpenTabs(prev => {
+        if (prev.some(t => t.path === file.path)) return prev;
+        return [...prev, { path: file.path, name: file.path, dirty: false }];
+      });
+    }
+  }, [drainedFiles]);
+
+  // Hydrate files from Store on mount (persistence)
+  useEffect(() => {
+    if (!store) return;
+    (async () => {
+      const saved = await store.list<{ text?: string }>("files");
+      if (saved.length > 0) {
+        const restored: Record<string, string> = {};
+        const tabs: import("../components/FileTabs").OpenTab[] = [];
+        for (const { key, value } of saved) {
+          if (typeof (value as { text?: string })?.text === "string") {
+            restored[key] = (value as { text: string }).text;
+            tabs.push({ path: key, name: key, dirty: false });
+          }
+        }
+        if (Object.keys(restored).length > 0) {
+          setFiles(prev => ({ ...ZERO_STATE_FILES, ...restored }));
+          setOpenTabs(prev => {
+            const existing = new Set(prev.map(t => t.path));
+            return [...prev, ...tabs.filter(t => !existing.has(t.path))];
+          });
+        }
+      }
+    })();
+  }, [store]);
+
+  // Persist files to Store on change (debounced)
+  useEffect(() => {
+    if (!store) return;
+    const timer = setTimeout(() => {
+      for (const [path, text] of Object.entries(files)) {
+        store.put("files", path, { path, text, encoding: "utf8" }).catch(() => {});
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [files, store]);
 
   function runActive() {
     const runId = nextRunId();

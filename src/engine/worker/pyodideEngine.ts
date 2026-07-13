@@ -41,6 +41,7 @@ interface MinimalPyodide {
   FS: {
     mkdir(path: string): void;
     readdir(path: string): string[];
+    readFile(path: string, opts?: { encoding?: string }): string | Uint8Array;
     unlink(path: string): void;
     writeFile(path: string, data: string | Uint8Array): void;
     analyzePath(path: string): { exists: boolean };
@@ -181,13 +182,38 @@ export class PyodideEngine implements PythonEngine {
     return { pyodideVersion: this.pyodide.version };
   }
 
-  drainFiles(_namespace: NamespaceId): FileBlob[] {
-    // v5 fileDrain: scan the session MEMFS working dir for new/changed files. In the real
-    // Pyodide engine, this reads from pyodide.FS.readdir / readFile against a snapshot of
-    // previously known file contents. Deferred to the deploy phase (requires live Pyodide
-    // MEMFS integration); stubbed to return empty for now. The worker protocol + main thread
-    // wiring is fully built; this method is the only remaining piece.
-    return [];
+  // v5 fileDrain: scan the session working dir for new/changed files.
+  // Session files live in the Pyodide CWD ("/home/pyodide" by default).
+  // Grading files live in GRADING_DIR ("/grading"), structurally separate.
+  private sessionFileSnapshots = new Map<string, string>();
+  private readonly SESSION_DIR = "/home/pyodide";
+
+  drainFiles(namespace: NamespaceId): FileBlob[] {
+    if (namespace !== "session") return [];
+    const drained: FileBlob[] = [];
+    try {
+      const entries = this.pyodide.FS.readdir(this.SESSION_DIR);
+      for (const name of entries) {
+        if (name === "." || name === "..") continue;
+        // Skip directories and special files
+        const fullPath = `${this.SESSION_DIR}/${name}`;
+        try {
+          // Read as binary, then try to decode as UTF-8
+          const raw = this.pyodide.FS.readFile(fullPath, { encoding: "binary" }) as Uint8Array;
+          const content = new TextDecoder("utf-8", { fatal: false }).decode(raw);
+          const prev = this.sessionFileSnapshots.get(name);
+          if (prev !== content) {
+            this.sessionFileSnapshots.set(name, content);
+            drained.push({ path: name, text: content, encoding: "utf8" });
+          }
+        } catch {
+          // Skip unreadable files (directories, etc.)
+        }
+      }
+    } catch {
+      // Session dir may not exist yet
+    }
+    return drained;
   }
 
   builtinNames(): ReadonlySet<string> {
