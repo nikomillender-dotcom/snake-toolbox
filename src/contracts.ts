@@ -1,10 +1,10 @@
 // contracts.ts, Snake ToolBox
 //
-// VERBATIM transcription of the interface contract block (contract-hash: STB-CONTRACT-v5).
+// VERBATIM transcription of the interface contract block (contract-hash: STB-CONTRACT-v6).
 // The only mechanical additions are the `export` keywords needed for an importable TS module.
 // No type shape, field, or comment content has been altered from the spec block.
 //
-// Source: integration-overview.md, BEGIN-CONTRACT-BLOCK .. END-CONTRACT-BLOCK, STB-CONTRACT-v5.
+// Source: integration-overview.md, BEGIN-CONTRACT-BLOCK .. END-CONTRACT-BLOCK, STB-CONTRACT-v6.
 
 // ============================================================================
 // CONTRACT 1: the worker runtime protocol (main thread <-> Pyodide worker)
@@ -189,11 +189,27 @@ export interface PortfolioIndex { title: string; intro: string;
                            entries: Array<{ name: string; module?: string; date: number; hero?: boolean }> }
 // v0.4 progress snapshot (single JSON to the PRIVATE backup repo). NOT secrets, NEVER the PAT. schemaVersion
 // matches Store.schemaVersion so a restore onto a newer build migrates the snapshot forward (same migrate() hook).
+// v6 (DESIGN v0.4.3): the snapshot ALSO carries the user's persisted Sandbox FILES (the `files` Store collection), so a
+// fresh iPad restores FULLY, not just the Learn journey. Files ride as BackupFile (JSON-safe): verbatim text, or base64
+// for binary (a Uint8Array is not JSON-safe); classifyBytes decides which. NO worker NamespaceId is carried (live
+// session state is ephemeral; only persisted files are backed up). A pre-v6 snapshot has no `files`; the restore
+// validator reads an absent `files` as [] (it captured none), so older backups still restore. On restore, files merge
+// ADDITIVELY by path: a path with no local file is restored, a path that already exists locally is LEFT ALONE (local
+// wins) and reported, never overwritten (the never-destroy invariant, like completedNodes union-by-id). A fresh device
+// has no local files, so all restore. SIZE-GUARDED (BackupFile below) so the snapshot cannot balloon.
 export interface ProgressBackup { schemaVersion: number; savedAt: number;
                            completedNodes: CompletedNode[];   // the honest progress log (CONTRACT 5)
                            reviews: ReviewState[];            // FSRS scheduler state (CONTRACT 6)
                            settings: Record<string, unknown>; // theme, key-row, console theme, reduced-motion
+                           files: BackupFile[];               // v6: persisted Sandbox files (the `files` Store collection)
                            profile: ProfileFacts }            // name + epithet (CONTRACT 5); no secrets
+export interface BackupFile { path: string;        // key in the `files` Store collection (project-relative, e.g. "main.py")
+                       content: string;      // JSON-safe: verbatim text, or base64 when encoding is "base64"
+                       encoding: "utf8" | "base64" } // wire encoding (distinct from FileBlob's storage "utf8" | "binary")
+// v6 SIZE GUARDRAILS (concrete caps in backend B14, tunable at build): a file over the PER-FILE cap is SKIPPED and
+// reported, never truncated; if the aggregate exceeds the TOTAL cap, prefer small/text files (the irreplaceable code)
+// and skip the largest binary first, REPORTING the skipped set (never a silent drop). The F2 secret scan (D5) covers
+// backed-up files too: a file that hits is EXCLUDED and reported, not written.
 export interface BackupResult { status: "saved" | "queued" | "needsReconnect" | "expiredToken"; url?: string; at?: number }
 // ship() internally: GET ref head -> build tree on base_tree -> commit parented to head -> PATCH ref
 // NON-FORCE. On 422 (moved head): re-GET head, rebuild tree on the NEW base_tree, re-commit with the
@@ -369,4 +385,4 @@ export declare function deriveGlossary(progress: ProgressSnapshot, bundle: Curri
 // authoring obligation: author each module's `terms` and keep every term's sourceLessonId pointed at a real lesson
 // whose completion-emitting step set is determinate (Frederick delta-check: "lesson complete" must be well-defined).
 
-// End of verbatim contract transcription (STB-CONTRACT-v5).
+// End of verbatim contract transcription (STB-CONTRACT-v6).

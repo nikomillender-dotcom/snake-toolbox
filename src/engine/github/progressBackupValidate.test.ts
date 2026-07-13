@@ -21,6 +21,7 @@ function validBackup(): ProgressBackup {
       },
     ],
     settings: { theme: "dark" },
+    files: [],
     profile: { name: "Niko", epithet: "the Curious", lastViewedAt: 0 },
   };
 }
@@ -68,5 +69,54 @@ describe("validateProgressBackup / parseProgressBackup (D12)", () => {
     const result = validateProgressBackup(backup);
     expect(result.valid).toBe(false);
     expect(result.errors).toContain("profile must be an object");
+  });
+});
+
+describe("v6 back-compat: files (DESIGN v0.4.3, B14)", () => {
+  it("accepts a PRE-V6 snapshot with no `files` field at all", () => {
+    const backup = validBackup() as unknown as Record<string, unknown>;
+    delete backup.files;
+    const result = validateProgressBackup(backup);
+    expect(result).toEqual({ valid: true, errors: [] });
+  });
+
+  it("parseProgressBackup normalizes an absent `files` to an empty array", () => {
+    const backup = validBackup() as unknown as Record<string, unknown>;
+    delete backup.files;
+    const parsed = parseProgressBackup(backup);
+    expect(parsed?.files).toEqual([]);
+  });
+
+  it("accepts a well-formed files array (utf8 and base64 entries)", () => {
+    const backup = validBackup();
+    backup.files = [
+      { path: "main.py", content: "print('hi')\n", encoding: "utf8" },
+      { path: "logo.png", content: "aGVsbG8=", encoding: "base64" },
+    ];
+    expect(validateProgressBackup(backup)).toEqual({ valid: true, errors: [] });
+  });
+
+  it("rejects a files entry with a bad encoding value", () => {
+    const backup = validBackup() as unknown as Record<string, unknown>;
+    backup.files = [{ path: "main.py", content: "x", encoding: "latin1" }];
+    const result = validateProgressBackup(backup);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("files[0].encoding"))).toBe(true);
+  });
+
+  it("rejects a files entry missing content", () => {
+    const backup = validBackup() as unknown as Record<string, unknown>;
+    backup.files = [{ path: "main.py", encoding: "utf8" }];
+    const result = validateProgressBackup(backup);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("files[0].content"))).toBe(true);
+  });
+
+  it("rejects `files` when present but not an array", () => {
+    const backup = validBackup() as unknown as Record<string, unknown>;
+    backup.files = "not-an-array";
+    const result = validateProgressBackup(backup);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("files must be an array when present");
   });
 });

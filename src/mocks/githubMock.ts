@@ -176,5 +176,6 @@ export const FIXTURE_RESTORE_SNAPSHOT: ProgressBackup = {
   ],
   reviews: [],
   settings: { theme: "dark", consoleTheme: "cli" },
+  files: [],
   profile: { name: "Niko", epithet: "the coder", lastViewedAt: Date.now() - 3 * DAY }
 };

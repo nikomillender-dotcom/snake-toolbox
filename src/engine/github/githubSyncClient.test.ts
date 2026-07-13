@@ -5,6 +5,7 @@ import { makeInMemoryStore } from "../fixtures/inMemoryStore.fixture.js";
 import { FakeGitHubApi } from "../fixtures/fakeGitHubApi.js";
 import { createGitHubAuth } from "./githubAuth.js";
 import { BACKUP_REPO_NAME, createGitHubSync, renderRootReadme } from "./githubSyncClient.js";
+import { PER_FILE_CAP_BYTES } from "./gatherBackupFiles.js";
 
 function memoryBackend() {
   const store = new Map<string, string>();
@@ -301,6 +302,7 @@ describe("GitHubSyncClient.backupProgress / restoreProgress / lastBackup (B14)",
       completedNodes: [{ nodeId: "m1", kind: "module", moduleId: "m1", timestamp: 1 }],
       reviews: [],
       settings: { theme: "dark" },
+      files: [],
       profile: { name: "Niko", epithet: "the Curious", lastViewedAt: 0 },
       ...overrides,
     };
@@ -396,5 +398,133 @@ describe("GitHubSyncClient.backupProgress / restoreProgress / lastBackup (B14)",
     const last = await sync.lastBackup();
     expect(last?.ok).toBe(true);
     expect(last?.at).toBe(new Date("2026-01-02T00:00:00.000Z").getTime());
+  });
+});
+
+describe("GitHubSyncClient backup/restore Sandbox files (B14 v6, DESIGN v0.4.3)", () => {
+  function backup(overrides: Partial<ProgressBackup> = {}): ProgressBackup {
+    return {
+      schemaVersion: 2,
+      savedAt: 1000,
+      completedNodes: [{ nodeId: "m1", kind: "module", moduleId: "m1", timestamp: 1 }],
+      reviews: [],
+      settings: { theme: "dark" },
+      files: [],
+      profile: { name: "Niko", epithet: "the Curious", lastViewedAt: 0 },
+      ...overrides,
+    };
+  }
+
+  it("gathers the persisted files Store collection into the snapshot, utf8 and base64 round trip", async () => {
+    const { api, auth, sync, store } = setup();
+    await connect(auth, api);
+    await store.put("files", "main.py", { path: "main.py", text: "print('hi')\n", encoding: "utf8" });
+    const gzipMagic = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    await store.put("files", "data.bin", { path: "data.bin", bytes: gzipMagic, encoding: "binary" });
+
+    const result = await sync.backupProgress(backup());
+    expect(result.status).toBe("saved");
+
+    const restored = await sync.restoreProgress();
+    const byPath = new Map(restored!.files.map((f) => [f.path, f]));
+    expect(byPath.get("main.py")).toEqual({ path: "main.py", content: "print('hi')\n", encoding: "utf8" });
+    const dataFile = byPath.get("data.bin")!;
+    expect(dataFile.encoding).toBe("base64");
+    const decoded = Uint8Array.from(atob(dataFile.content), (c) => c.charCodeAt(0));
+    expect(Array.from(decoded)).toEqual(Array.from(gzipMagic));
+  });
+
+  it("an oversized file is excluded from the backed-up snapshot and reported, never truncated", async () => {
+    const { api, auth, sync, store } = setup();
+    await connect(auth, api);
+    await store.put("files", "small.py", { path: "small.py", text: "print(1)\n", encoding: "utf8" });
+    await store.put("files", "huge.py", { path: "huge.py", text: "x".repeat(PER_FILE_CAP_BYTES + 1), encoding: "utf8" });
+
+    await sync.backupProgress(backup());
+    const restored = await sync.restoreProgress();
+    expect(restored!.files.map((f) => f.path)).toEqual(["small.py"]);
+
+    const skips = await sync.lastBackupSkippedFiles();
+    expect(skips).toEqual([{ path: "huge.py", reason: "overPerFileCap", sizeBytes: PER_FILE_CAP_BYTES + 1 }]);
+  });
+
+  it("a per-file secret hit excludes just that file; the rest of the backup still saves (D5)", async () => {
+    const { api, auth, sync, store } = setup();
+    await connect(auth, api);
+    await store.put("files", "clean.py", { path: "clean.py", text: "print('clean')\n", encoding: "utf8" });
+    await store.put("files", "leak.py", {
+      path: "leak.py",
+      text: "TOKEN='ghp_1234567890abcdefghijklmnopqrstuvwxyzAB'",
+      encoding: "utf8",
+    });
+
+    const result = await sync.backupProgress(backup());
+    expect(result.status).toBe("saved"); // the whole backup is NOT refused
+
+    const restored = await sync.restoreProgress();
+    expect(restored!.files.map((f) => f.path)).toEqual(["clean.py"]);
+
+    const skips = await sync.lastBackupSkippedFiles();
+    expect(skips.some((s) => s.path === "leak.py" && s.reason === "secretDetected")).toBe(true);
+  });
+
+  it("restoreProgress restores files ADDITIVELY: a local file at a colliding path is left alone, reported", async () => {
+    const { api, auth, sync, store } = setup();
+    await connect(auth, api);
+    await store.put("files", "main.py", { path: "main.py", text: "print('backed up version')\n", encoding: "utf8" });
+    await sync.backupProgress(backup());
+
+    // A DIFFERENT device/session: the local `main.py` now differs (in-progress local work).
+    const localVersion = { path: "main.py", text: "print('local, still being edited')\n", encoding: "utf8" as const };
+    await store.put("files", "main.py", localVersion);
+    await store.put("files", "brand_new.py", { path: "brand_new.py", text: "print('never seen before')\n", encoding: "utf8" });
+
+    await sync.restoreProgress();
+
+    // The colliding local file is untouched, byte-for-byte.
+    expect(await store.get("files", "main.py")).toEqual(localVersion);
+    // A local-only file with no counterpart in the backup is untouched too: restore is scoped
+    // strictly to the paths that came back in the snapshot.
+    expect(await store.get("files", "brand_new.py")).toEqual({ path: "brand_new.py", text: "print('never seen before')\n", encoding: "utf8" });
+    const report = await sync.lastRestoreFileReport();
+    expect(report.skipped).toEqual(["main.py"]);
+  });
+
+  it("a fresh device (no local files) restores every backed-up file", async () => {
+    const { api, auth, sync, store } = setup();
+    await connect(auth, api);
+    await store.put("files", "main.py", { path: "main.py", text: "print('hi')\n", encoding: "utf8" });
+    await sync.backupProgress(backup());
+    await store.delete("files", "main.py"); // simulate a fresh device: nothing local
+
+    await sync.restoreProgress();
+    expect(await store.get("files", "main.py")).toEqual({ path: "main.py", text: "print('hi')\n", encoding: "utf8" });
+    const report = await sync.lastRestoreFileReport();
+    expect(report.written).toEqual(["main.py"]);
+    expect(report.skipped).toEqual([]);
+  });
+
+  it("v6 back-compat: a pre-v6 snapshot with no `files` field restores unchanged (files defaults to [])", async () => {
+    const { api, auth, sync } = setup();
+    await connect(auth, api);
+    api.createRepo("niko", BACKUP_REPO_NAME, "private");
+    api.seedContents(
+      "niko",
+      BACKUP_REPO_NAME,
+      "progress.json",
+      JSON.stringify({
+        schemaVersion: 2,
+        savedAt: 1,
+        completedNodes: [{ nodeId: "m1", kind: "module", moduleId: "m1", timestamp: 1 }],
+        reviews: [],
+        settings: { theme: "dark" },
+        profile: { name: "Niko", epithet: "the Curious", lastViewedAt: 0 },
+        // no `files` key at all: the pre-v6 shape
+      }),
+    );
+    const restored = await sync.restoreProgress();
+    expect(restored).not.toBeNull();
+    expect(restored!.files).toEqual([]);
+    expect(restored!.completedNodes).toHaveLength(1);
   });
 });

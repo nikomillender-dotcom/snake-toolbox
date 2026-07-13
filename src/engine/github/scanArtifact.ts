@@ -50,6 +50,20 @@ function scanText(text: string): Array<"sk-" | "ghp_" | "github_pat_" | "entropy
   return hits;
 }
 
+/** The hit-kind union scanText/scanArtifact/scanFileBlobHits all share (CONTRACT 3, ScanResult["hits"][number]["kind"]). */
+export type SecretHitKind = "sk-" | "ghp_" | "github_pat_" | "entropy";
+
+/**
+ * Scans a single FileBlob-shaped file's content for secret-shaped strings (F2), reusing the exact
+ * same text-vs-bytes-as-latin1 convention scanArtifact() already uses per Artifact file. Used by
+ * gatherBackupFiles (B14 v6) to run the F2 scan PER FILE on the Sandbox files collection, so one
+ * flagged file can be excluded without refusing the whole backup.
+ */
+export function scanFileBlobHits(file: { text?: string; bytes?: Uint8Array }): SecretHitKind[] {
+  const text = file.text ?? (file.bytes ? bytesToLatin1(file.bytes) : "");
+  return scanText(text);
+}
+
 export function scanArtifact(artifact: Artifact): ScanResult {
   const hits: ScanResult["hits"] = [];
   for (const file of artifact.files) {

@@ -38,6 +38,8 @@ import { createOfflineQueue, type OfflineQueue, type OfflineQueueOptions } from 
 import { migrateProgressBackup } from "./progressBackupMigrate.js";
 import { parseProgressBackup } from "./progressBackupValidate.js";
 import { scanArtifact, scanSerializedPayload } from "./scanArtifact.js";
+import { gatherBackupFiles, type BackupFileSkip } from "./gatherBackupFiles.js";
+import { restoreBackupFilesAdditively, type RestoreFilesReport } from "./restoreBackupFiles.js";
 
 export const BACKUP_REPO_NAME = "snake-toolbox-save";
 const PROGRESS_FILE_PATH = "progress.json";
@@ -55,6 +57,14 @@ class ExpiredTokenError extends Error {}
 
 export function createGitHubSync(deps: GitHubSyncDeps, queue: OfflineQueue = createOfflineQueue(deps.store, deps.queueOptions)) {
   const captureHeaders = (headers: Headers): Promise<void> => captureTokenExpiryHeaders(deps.store, headers, deps.now());
+
+  // v6 (B14, non-contract): the most recent per-file skip/report data, so a future UI can surface
+  // "2 files were too large to back up" or "1 restored file collided with a local file" honestly.
+  // Neither ProgressBackup nor BackupResult has room for this in the frozen contract (I10), so this
+  // rides as an ADDITIVE method outside the GitHubSync interface, the same "additive, out of
+  // contract" posture the keepRemote reconciliation and lastBackup() precedent already established.
+  let lastBackupFileSkips: BackupFileSkip[] = [];
+  let lastRestoreFileReport: RestoreFilesReport = { written: [], skipped: [] };
 
   async function requireConnection(): Promise<{ token: string; owner: string; portfolioRepo: string; branch: string }> {
     const meta = await readMeta(deps.store);
@@ -212,7 +222,16 @@ export function createGitHubSync(deps: GitHubSyncDeps, queue: OfflineQueue = cre
   // (must not double-enqueue, and DOES want a retryable GitHubApiError to reach offlineQueue's own
   // Retry-After/backoff logic).
   async function attemptBackupOnce(snapshot: ProgressBackup): Promise<BackupResult> {
-    const serialized = JSON.stringify(snapshot);
+    // v6 (B14): gather the persisted `files` Store collection fresh at the moment of the actual
+    // write attempt (both a direct call and a later queued flush share this core), so a retried
+    // backup always reflects the CURRENT workbench rather than a snapshot frozen at enqueue time.
+    // The per-file secret scan (D5) and both size caps already ran inside gatherBackupFiles; only
+    // clean, in-budget files reach the snapshot that gets serialized and written below.
+    const gathered = await gatherBackupFiles(deps.store);
+    lastBackupFileSkips = gathered.skipped;
+    const fullSnapshot: ProgressBackup = { ...snapshot, files: gathered.files };
+
+    const serialized = JSON.stringify(fullSnapshot);
     const scan = scanSerializedPayload(serialized);
     if (!scan.clean) {
       // D5: the F2 scan is a RUNTIME GATE on backup, not a fixture nicety. Refuse the write hard.
@@ -443,17 +462,33 @@ export function createGitHubSync(deps: GitHubSyncDeps, queue: OfflineQueue = cre
       }
       const validated = parseProgressBackup(parsed);
       if (!validated) return null; // corrupt/partial: reject cleanly, nothing changes (D12)
+      let migrated: ProgressBackup;
       try {
-        return migrateProgressBackup(validated);
+        migrated = migrateProgressBackup(validated);
       } catch {
         return null;
       }
+      // v6 (B14/I14): decode each BackupFile and write it into the `files` Store collection
+      // ADDITIVELY. A path that already exists locally is LEFT ALONE (local wins) and reported; a
+      // fresh device has no local files, so every backed-up file lands. A pre-v6 snapshot's
+      // `files` was already normalized to [] by parseProgressBackup, so this is a no-op for it.
+      lastRestoreFileReport = await restoreBackupFilesAdditively(deps.store, migrated.files);
+      return migrated;
     },
 
     async lastBackup(): Promise<{ at: number; ok: boolean } | null> {
       const meta = await readMeta(deps.store);
       if (meta.lastBackupAt === null || meta.lastBackupOk === null) return null;
       return { at: meta.lastBackupAt, ok: meta.lastBackupOk };
+    },
+
+    // v6 (B14, NOT part of the frozen GitHubSync contract, see the comment above): the honest
+    // skip/collision reports from the most recent backup/restore attempt.
+    async lastBackupSkippedFiles(): Promise<BackupFileSkip[]> {
+      return lastBackupFileSkips;
+    },
+    async lastRestoreFileReport(): Promise<RestoreFilesReport> {
+      return lastRestoreFileReport;
     },
   };
 

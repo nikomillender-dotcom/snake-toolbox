@@ -2,7 +2,7 @@
 // progress.json, validate it against the ProgressBackup shape (required fields present and
 // well-typed) and REJECT a corrupt or partial snapshot CLEANLY: "that backup looked incomplete,
 // nothing changed," never a half-applied restore.
-import type { CompletedNode, ProgressBackup, ReviewState } from "../../contracts.js";
+import type { BackupFile, CompletedNode, ProgressBackup, ReviewState } from "../../contracts.js";
 
 export interface ValidationResult {
   valid: boolean;
@@ -28,6 +28,19 @@ function validateCompletedNode(node: unknown, index: number, errors: string[]): 
   if (!isString(node.kind)) errors.push(`completedNodes[${index}].kind must be a string`);
   if (!isString(node.moduleId)) errors.push(`completedNodes[${index}].moduleId must be a string`);
   if (!isNumber(node.timestamp)) errors.push(`completedNodes[${index}].timestamp must be a number`);
+  return errors.length === 0;
+}
+
+function validateBackupFile(file: unknown, index: number, errors: string[]): file is BackupFile {
+  if (!isPlainObject(file)) {
+    errors.push(`files[${index}] is not an object`);
+    return false;
+  }
+  if (!isString(file.path)) errors.push(`files[${index}].path must be a string`);
+  if (!isString(file.content)) errors.push(`files[${index}].content must be a string`);
+  if (file.encoding !== "utf8" && file.encoding !== "base64") {
+    errors.push(`files[${index}].encoding must be "utf8" or "base64"`);
+  }
   return errors.length === 0;
 }
 
@@ -80,6 +93,17 @@ export function validateProgressBackup(candidate: unknown): ValidationResult {
 
   if (!isPlainObject(candidate.settings)) errors.push("settings must be an object");
 
+  // v6 back-compat (DESIGN v0.4.3): a pre-v6 snapshot legitimately has no `files` at all (it
+  // captured none). An ABSENT `files` is accepted (defaulted to [] by parseProgressBackup below);
+  // only a PRESENT-but-malformed `files` is rejected.
+  if (candidate.files !== undefined) {
+    if (!Array.isArray(candidate.files)) {
+      errors.push("files must be an array when present");
+    } else {
+      candidate.files.forEach((f, i) => validateBackupFile(f, i, errors));
+    }
+  }
+
   if (!isPlainObject(candidate.profile)) {
     errors.push("profile must be an object");
   } else {
@@ -91,8 +115,14 @@ export function validateProgressBackup(candidate: unknown): ValidationResult {
   return { valid: errors.length === 0, errors };
 }
 
-/** Type-narrowing convenience: returns the validated ProgressBackup, or null on any validation failure. */
+/**
+ * Type-narrowing convenience: returns the validated ProgressBackup, or null on any validation
+ * failure. v6 back-compat: a pre-v6 snapshot has no `files`; it is normalized to `[]` here (it
+ * captured none), so every caller downstream can rely on `.files` always being an array.
+ */
 export function parseProgressBackup(candidate: unknown): ProgressBackup | null {
   const result = validateProgressBackup(candidate);
-  return result.valid ? (candidate as ProgressBackup) : null;
+  if (!result.valid) return null;
+  const obj = candidate as ProgressBackup & { files?: BackupFile[] };
+  return { ...obj, files: obj.files ?? [] };
 }
