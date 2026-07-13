@@ -312,14 +312,40 @@ Items 1 and 2 now PASS locally via Playwright; live Vercel confirmation still ne
 
 ---
 
-## Deploy-phase items (what remains after round 2)
+## Round 3: persistence, real drain, PWA icons, N1/N5 (2026-07-12)
 
-1. **Vercel deploy + live URL verification** (COOP/COEP confirmed locally, need live confirmation)
+### What closed
+
+| Item | Status | Evidence |
+|---|---|---|
+| Gap 4: IndexedDbStore persistence | DONE | AppRoot.tsx opens IndexedDbStore, passes to App; progress + files hydrated on mount, persisted on change |
+| Gap 6: fileDrain to file rail | DONE | SandboxScreen subscribes to drainedFiles prop, UPSERTs into local state + Store |
+| PyodideEngine.drainFiles | DONE | Real session-dir MEMFS scan (/home/pyodide, separate from /grading), snapshot tracking |
+| PWA icons | DONE | generate-pwa-icons.mjs: 192x192 and 512x512 PNGs from app color tokens, no new deps |
+| N1: canary dedupe | DONE | canary.yml: state:"all", reopens closed issues |
+| N5: glossary comment + lock contrast | DONE | Comment fixed; IconLock color raised to #8a7e72 for 3:1+ contrast |
+
+### Suite counts (round 3)
+
+| Suite | Tests | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| Unit tests (47 files, vitest) | 320 | 319 | 0 | 1 |
+| E2E tests (1 file, Playwright) | 2 | 2 | 0 | 0 |
+| **Total** | **322** | **321** | **0** | **1** |
+
+---
+
+## Deviations
+
+**0 deviations across all three rounds.** No contract change forced (I10 satisfied).
+
+---
+
+## What genuinely remains (deploy-only, real device, or Niko's token)
+
+1. **Vercel deploy + live URL verification:** COOP/COEP + CSP confirmed locally, need live Vercel confirmation
 2. **Real iPad Safari:** SAB input/interrupt (item 3), CodeMirror 6 VoiceOver (item 4)
 3. **Real PAT hands-on:** header verification against Niko's actual fine-grained PAT (checklist 27)
-4. **IndexedDbStore swap:** the in-memory store works for session lifetime; real IDB gives persistence across reloads (gap 4 full closure)
-5. **SandboxScreen fileDrain subscription:** rides on the IndexedDbStore swap (gap 6 full closure)
-6. **PyodideEngine.drainFiles real MEMFS scan:** protocol wiring proven, MEMFS read is the remaining piece
-7. **matplotlib Agg-backend capture:** needs live Pyodide with the package loaded
-8. **N1/N5:** canary dedupe for closed issues; GlossaryScreen comment fix (low priority NOTE items)
-9. **PWA icon assets:** manifest.json references icon-192.png and icon-512.png; need real pixel art from the sprite system
+4. **matplotlib Agg-backend capture:** genuinely needs live Pyodide with the package loaded via loadPackage
+5. **Byleth's curriculum content:** the Learn router + player are built, awaiting real lesson content beyond the fixture modules
+6. **Real sprite art for tiers 2 to 4:** placeholder recolors, honestly labeled, await authoring
