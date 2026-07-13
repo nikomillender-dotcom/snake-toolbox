@@ -10,8 +10,19 @@ import { RunBar } from "../components/RunBar";
 import { OutputStream, bytesToDataUrl, type ActiveInputRequest, type OutputItem } from "../components/OutputStream";
 import { CheckResult } from "../components/CheckResult";
 import { LessonPane } from "../components/LessonPane";
+import { PredictionField } from "../components/PredictionField";
 import { DegradedBootBanner } from "../components/DegradedBootBanner";
 import { RestartConfirmDialog } from "../components/RestartConfirmDialog";
+import {
+  type AnswerState,
+  type LocalGradeResult,
+  type GraderRoute,
+  graderRouteFor,
+  initialAnswerFor,
+  isAnswerEmpty,
+  gradeAnswerForStep,
+  EMPTY_NUDGE,
+} from "../lib/gradeAnswer";
 
 // Router types (R1)
 type LearnView =
@@ -30,6 +41,10 @@ export interface LearnScreenProps {
   onOpenInSandbox?: (code: string) => void;
   onLessonStepComplete?: (moduleId: string, lessonId: string, stepId: string) => void;
   onEnterBoss?: (moduleId: string) => void;
+  // G5: gates the predictOutput/traceTable "Run it and see" reveal. Defaults true (matches every
+  // existing test/call site, which never modeled worker-boot readiness); the real composition root
+  // (App.tsx) passes the actual Pyodide-boot state.
+  workerReady?: boolean;
 }
 
 // R3: completion predicates
@@ -52,7 +67,7 @@ function nextRunId(): string { runIdSeq += 1; return `run-${runIdSeq}`; }
 
 export function LearnScreen({
   bundle, worker, inputCapable, learnView, lessonIndex, completedNodes,
-  onNavigate, onOpenInSandbox, onLessonStepComplete, onEnterBoss
+  onNavigate, onOpenInSandbox, onLessonStepComplete, onEnterBoss, workerReady = true
 }: LearnScreenProps) {
 
   // === MAP VIEW (R2) ===
@@ -191,6 +206,7 @@ export function LearnScreen({
       onEnterBoss={onEnterBoss}
       completedNodes={completedNodes}
       focusStepId={learnView.focusStepId}
+      workerReady={workerReady}
     />
   );
 }
@@ -207,12 +223,13 @@ interface LessonPlayerProps {
   onEnterBoss?: (moduleId: string) => void;
   completedNodes: CompletedNode[];
   focusStepId?: string;
+  workerReady: boolean;
 }
 
 function LessonPlayer({
   module: mod, lesson, worker, inputCapable,
   onNavigate, onOpenInSandbox, onLessonStepComplete, onEnterBoss,
-  completedNodes, focusStepId
+  completedNodes, focusStepId, workerReady
 }: LessonPlayerProps) {
   // Start at the focusStepId if provided, else first incomplete step
   const initialStep = useMemo(() => {
@@ -230,6 +247,10 @@ function LessonPlayer({
 
   const [stepIndex, setStepIndex] = useState(initialStep);
   const step = lesson.steps[stepIndex]!;
+  // G0: the ONE router. writeStub/fixBug/boss -> "hiddenTest" (worker path, unchanged). The five
+  // answer-compared kinds -> their own main-thread grader. Anything else -> "none" (G13 defensive
+  // clause: never auto-pass a step that matches no grader).
+  const route: GraderRoute = graderRouteFor(step);
 
   const [portrait, setPortrait] = useState(false);
   const [segment, setSegment] = useState<"lesson" | "code" | "output">("lesson");
@@ -242,6 +263,15 @@ function LessonPlayer({
   const [checkOutcome, setCheckOutcome] = useState<{ passed: boolean; results: TestOutcome[] } | null>(null);
   const [restartScratchOpen, setRestartScratchOpen] = useState(false);
 
+  // grading-interaction-spec answer-capture + local-grade state (G6/G8/G10, G16). UI-local
+  // ephemeral state only, stored nowhere (G19), reset on every step change below.
+  const [answer, setAnswer] = useState<AnswerState>(() => initialAnswerFor(step));
+  const [missCount, setMissCount] = useState(0);          // completed misses on THIS step (G16 ladder)
+  const [attemptsMade, setAttemptsMade] = useState(0);     // total Check presses on this step (G5 gate)
+  const [localGrade, setLocalGrade] = useState<LocalGradeResult | null>(null);
+  const [hasRunReveal, setHasRunReveal] = useState(false); // G5/G16: has "Run it and see" been used
+  const [emptyNudge, setEmptyNudge] = useState<string | null>(null); // G13 calm inline nudge
+
   const gradedRunId = useRef<string | null>(null);
   const scratchRunId = useRef<string | null>(null);
   const editorHandle = useRef<CodeEditorHandle>(null);
@@ -251,7 +281,19 @@ function LessonPlayer({
     setCode(step?.starterCode ?? "");
     setCheckOutcome(null);
     setItems([]);
+    setAnswer(initialAnswerFor(step));
+    setMissCount(0);
+    setAttemptsMade(0);
+    setLocalGrade(null);
+    setHasRunReveal(false);
+    setEmptyNudge(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, lesson.id]);
+
+  function updateAnswer(next: AnswerState) {
+    setAnswer(next);
+    setEmptyNudge(null);
+  }
 
   useEffect(() => {
     const unsubscribe = worker.subscribe((msg) => {
@@ -292,12 +334,61 @@ function LessonPlayer({
     worker.send({ t: "run", runId, code, mountFiles: [], namespace: "graded" });
   }
   function stopGraded() { if (gradedRunId.current) worker.send({ t: "stop", runId: gradedRunId.current }); }
+
+  // G0: checkGraded routes by Step.kind. writeStub/fixBug/boss keep the exact hidden-test path this
+  // function always used (worker-run, UNCHANGED). The five answer-compared kinds grade MAIN-THREAD
+  // and INSTANT (no worker round-trip): the empty-always-pass fallback that used to send a single
+  // empty-code hidden test for these kinds is GONE (that was the hole this round closes).
   function checkGraded() {
+    if (route === "hiddenTest") {
+      const runId = nextRunId();
+      gradedRunId.current = runId;
+      setRunning(true);
+      setEmptyNudge(null);
+      const hiddenTests: HiddenTest[] = step.hiddenTests ?? [{ id: "default", code: "", message: "your output should match the brief" }];
+      worker.send({ t: "check", runId, code, mountFiles: [], hiddenTests });
+      return;
+    }
+    if (route === "none") {
+      // G0/G13 defensive clause: a step matching no grader must never auto-pass.
+      setEmptyNudge("This step cannot be graded yet.");
+      return;
+    }
+    // G13: empty or partial is an honest "not yet." Never clears, never emits, never fake-passes.
+    if (isAnswerEmpty(route, answer)) {
+      setEmptyNudge(EMPTY_NUDGE[route] ?? "Answer this one before you check.");
+      return;
+    }
+    setEmptyNudge(null);
+    const result = gradeAnswerForStep(route, answer, step, missCount, hasRunReveal);
+    setAttemptsMade((n) => n + 1);
+    setLocalGrade(result);
+    setCheckOutcome({
+      passed: result.passed,
+      results: [{ id: step.id, passed: result.passed, message: result.message, actual: result.actual, expected: result.expected }],
+    });
+    if (result.passed) {
+      // G17: only a genuinely correct answer emits, through the SAME callback the hidden-test path
+      // already uses; App.tsx's handleLessonStepComplete carries strand verbatim (P8) and dedupes
+      // by nodeId (CONTRACT 5), so re-passing an already-complete step is a no-op there.
+      onLessonStepComplete?.(mod.id, lesson.id, step.id);
+    } else {
+      setMissCount((n) => n + 1);
+    }
+  }
+
+  // G5: the OPTIONAL "Run it and see" reveal for predictOutput/traceTable, post-attempt only. Runs
+  // the step's OWN authored code (never the learner's typed prediction) so a wrong guess becomes a
+  // live discovery. Reuses the graded run id / items plumbing (a plain "run" never emits
+  // checkResult, so this can never accidentally trigger completion).
+  function runReveal() {
+    if (!workerReady) return;
     const runId = nextRunId();
     gradedRunId.current = runId;
     setRunning(true);
-    const hiddenTests: HiddenTest[] = step.hiddenTests ?? [{ id: "default", code: "", message: "your output should match the brief" }];
-    worker.send({ t: "check", runId, code, mountFiles: [], hiddenTests });
+    setItems([]);
+    setHasRunReveal(true);
+    worker.send({ t: "run", runId, code: step.code ?? "", mountFiles: [], namespace: "graded" });
   }
   function runScratch() {
     const runId = nextRunId();
@@ -310,18 +401,30 @@ function LessonPlayer({
     setActiveInput(null);
   }
 
-  const teacherPane = useMemo(
-    () => (
-      <LessonPane
-        moduleTitle={mod.title}
-        lesson={lesson}
-        stepIndex={stepIndex}
-        onTryItRun={async () => "hey"}
-        onEnterBoss={onEnterBoss ? () => onEnterBoss(mod.id) : undefined}
-      />
-    ),
-    [mod, lesson, stepIndex, onEnterBoss]
+  // grading-interaction-spec G6/G8/G10: mcq/fillBlank/parsons capture their answer inside
+  // LessonPane's "Your turn" block, so it needs the live answer/grade state. Not memoized (it
+  // changes on every keystroke/selection/reorder for those kinds; Preact re-renders are cheap).
+  const teacherPane = (
+    <LessonPane
+      moduleTitle={mod.title}
+      lesson={lesson}
+      stepIndex={stepIndex}
+      onTryItRun={async () => "hey"}
+      onEnterBoss={onEnterBoss ? () => onEnterBoss(mod.id) : undefined}
+      answer={answer}
+      onAnswerChange={updateAnswer}
+      localGrade={localGrade}
+      missCount={missCount}
+    />
   );
+
+  // G0/G13: where the WORK pane's Check button ends up disabled. "none" (no grader) is always
+  // disabled; "hiddenTest" is unchanged (never disabled here); the five comparison kinds disable on
+  // an empty answer (preferred over letting a click through and doing nothing, G13).
+  const checkDisabled = route === "none" ? true : route === "hiddenTest" ? false : isAnswerEmpty(route, answer);
+  const showPredictionField = route === "predictOutput" || route === "traceTable";
+  const showEditorBezel = route === "hiddenTest" || route === "none";
+  const showRunRevealButton = showPredictionField && attemptsMade >= 1 && workerReady;
 
   return (
     <div class={portrait ? "learn-screen pmode" : "learn-screen"}>
@@ -352,7 +455,7 @@ function LessonPlayer({
         {(!portrait || segment === "lesson") && teacherPane}
         {(!portrait || segment === "code" || segment === "output") && (
           <div class="pane work" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-            {(!portrait || segment === "code") && (
+            {(!portrait || segment === "code") && showEditorBezel && (
               <div class="editor-bezel">
                 <div class="editor-head">
                   <span class="fn">lesson.py (graded, runs fresh every time)</span>
@@ -361,9 +464,35 @@ function LessonPlayer({
                 <CodeEditor value={code} onChange={setCode} ariaLabel="Graded lesson code editor" handleRef={editorHandle} />
               </div>
             )}
+            {(!portrait || segment === "code") && showPredictionField && (
+              <PredictionField
+                value={answer.prediction}
+                onChange={(v) => updateAnswer({ ...answer, prediction: v })}
+              />
+            )}
             {(!portrait || segment === "output") && (
               <>
-                <RunBar running={running} onRun={runGraded} onStop={stopGraded} onCheck={checkGraded} interruptCapable={inputCapable} />
+                <RunBar
+                  running={running}
+                  onRun={runGraded}
+                  onStop={stopGraded}
+                  onCheck={checkGraded}
+                  interruptCapable={inputCapable}
+                  hideRun={!showEditorBezel}
+                  hideStop={!showEditorBezel}
+                  checkDisabled={checkDisabled}
+                />
+                {route === "none" && (
+                  <div class="dim-label" role="status" style={{ padding: "0 12px 10px" }}>This step cannot be graded yet.</div>
+                )}
+                {emptyNudge && (
+                  <div class="dim-label" role="status" style={{ padding: "0 12px 10px" }}>{emptyNudge}</div>
+                )}
+                {showRunRevealButton && (
+                  <div style={{ padding: "0 12px 10px" }}>
+                    <button type="button" class="btn btn-ghost btn-small" onClick={runReveal}>Run it and see</button>
+                  </div>
+                )}
                 <OutputStream items={items} activeInputRequest={activeInput} onInputSubmit={submitInput} />
                 {checkOutcome && (
                   <CheckResult
@@ -381,7 +510,7 @@ function LessonPlayer({
           </div>
         )}
       </div>
-      {(!portrait || segment === "code") && <KeyRow editorRef={editorHandle} />}
+      {(!portrait || segment === "code") && showEditorBezel && <KeyRow editorRef={editorHandle} />}
       <details style={{ margin: "8px 14px" }}>
         <summary class="dim-label">scratch REPL (persistent, never feeds Check)</summary>
         <div class="editor-bezel" style={{ height: "140px" }}>

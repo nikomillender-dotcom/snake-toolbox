@@ -22,7 +22,7 @@ export function CheckResult({ passed, results, hints, modelSolution, yourCode, o
 
   if (passed) {
     return (
-      <div class="check-result">
+      <div class="check-result" role="status">
         <div class="res-card pass">
           <div class="res-head"><IconCheckBig /> Nice. Step cleared.</div>
           <p>You proved it, not just guessed it. On to the next one.</p>
@@ -40,7 +40,7 @@ export function CheckResult({ passed, results, hints, modelSolution, yourCode, o
   const firstFail = results.find((r) => !r.passed);
 
   return (
-    <div class="check-result">
+    <div class="check-result" role="status">
       <div class="res-card fail">
         <div class="res-head"><IconX /> Not yet, one requirement short.</div>
         {firstFail && <p style={{ margin: "6px 0" }}>{firstFail.message}</p>}

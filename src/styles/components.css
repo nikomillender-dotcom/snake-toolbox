@@ -70,10 +70,33 @@
 .res-card.pass { border-color: rgba(123,216,143,.5); box-shadow: inset 3px 0 0 var(--mint); }
 .res-head { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
 .diff-block { font-family: var(--font-mono); font-size: 13px; margin-top: 10px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
-.diff-block > div { padding: 6px 10px; }
+.diff-block > div { padding: 6px 10px; white-space: pre-wrap; word-break: break-word; }
 .diff-block .exp { background: rgba(123,216,143,.08); color: var(--mint); }
 .diff-block .got { background: rgba(232,138,124,.08); color: var(--err); }
 .hint-box { margin-top: 12px; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--pink-wash-min); border-left: 3px solid var(--pink); padding: 10px 12px; border-radius: 0 8px 8px 0; }
+
+/* ---- prediction field (G1: predictOutput/traceTable capture, NOT the code editor, echoes the
+   OutputStream so it reads as "what the stage would show") ---- */
+.predict-console { background: var(--console-bg); margin: 12px; border-radius: 10px; border: 1px solid var(--line); flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.predict-textarea { flex: 1; width: 100%; background: transparent; border: 0; outline: none; resize: none; color: var(--console-fg, var(--ink)); font-family: var(--font-mono); font-size: 15px; line-height: 1.6; padding: 0 14px 14px; caret-color: var(--pink); }
+
+/* ---- mcq capture (G6): large touch rows, single-select, calm never-color-alone marks (G7) ---- */
+.mcq-row { display: flex; align-items: center; gap: 10px; min-height: var(--target-min); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin: 6px 0; cursor: pointer; }
+.mcq-row.sel { border-color: var(--pink); background: var(--pink-wash-min); }
+.mcq-row input[type="radio"] { width: 20px; height: 20px; accent-color: var(--pink); }
+
+/* ---- fillBlank capture (G8): inline chip, mono, punctuation-safe ---- */
+.blank-chip { display: inline-flex; min-width: 3ch; max-width: 16ch; min-height: 36px; padding: 2px 8px; margin: 0 4px; border-radius: 8px; border: 1px solid var(--pink); background: var(--panel-2); color: var(--ink); font-size: 15px; text-align: center; caret-color: var(--pink); }
+
+/* ---- parsons capture (G10): reorder list, move-buttons as the accessible primary ---- */
+.parsons-list { list-style: none; padding: 0; margin: 12px 0; }
+.parsons-row { display: flex; align-items: center; gap: 10px; min-height: var(--target-min); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin: 6px 0; }
+.parsons-row .parsons-buttons { display: flex; gap: 4px; }
+
+/* ---- calm marks: word + icon, never color alone (F18 rule 5, G7/G12) ---- */
+.mark { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; margin-left: auto; white-space: nowrap; }
+.mark.not-this-one, .mark.move-me { color: var(--dim); }
+.mark.this-one, .mark.settled { color: var(--mint); }
 
 /* ---- session chip ---- */
 .session-chip { position: relative; display: inline-flex; align-items: center; gap: 9px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 24px; padding: 9px 14px; min-height: 44px; cursor: pointer; font-family: var(--font-mono); font-size: 13px; color: var(--ink); }

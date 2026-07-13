@@ -1,10 +1,23 @@
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
+import type { RefObject } from "preact";
 import type { Lesson, Step } from "../contracts";
 import { PixelWord } from "./PixelWord";
+import { KeyRow } from "./KeyRow";
+import type { CodeEditorHandle } from "./CodeEditor";
+import { IconCheckBig, IconX } from "./icons";
+import {
+  type AnswerState,
+  type LocalGradeResult,
+  mcqRevealsAnswer,
+  parsonsSettledMask,
+  parsonsRevealsOrder,
+} from "../lib/gradeAnswer";
 
 // LessonPane, L1/3.1/3.2: prose renderer + inline LiveExample blocks (mini editor + run) + the
 // rung-ladder exercise prompt. This is the TEACHER side of the two-pane Learn layout; the DOING
-// side (editor/run/console/check) lives in screens/LearnScreen.tsx.
+// side (Check/CheckResult and, for predictOutput/traceTable, the prediction field itself, G1) lives
+// in screens/LearnScreen.tsx. mcq/fillBlank/parsons capture their answer HERE, in the "Your turn"
+// block, since there is no code to write for these three kinds (grading-interaction-spec G6/G8/G10).
 
 export interface LessonPaneProps {
   moduleTitle: string;
@@ -12,37 +25,220 @@ export interface LessonPaneProps {
   stepIndex: number;
   onTryItRun?: (code: string) => Promise<string>;
   onEnterBoss?: () => void;
+  // grading-interaction-spec answer capture wiring (G6/G8/G10). Optional so this component still
+  // renders sensibly for kinds that do not need them (prose/liveExample/reflection/boss/hidden-test).
+  answer?: AnswerState;
+  onAnswerChange?: (next: AnswerState) => void;
+  localGrade?: LocalGradeResult | null;
+  missCount?: number;
 }
 
-function ExercisePromptBody({ step }: { step: Step }) {
+function FillBlankCapture({
+  step, value, onChange,
+}: { step: Step; value: string; onChange: (v: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleRef = useRef<CodeEditorHandle | null>(null) as RefObject<CodeEditorHandle>;
+
+  useEffect(() => {
+    (handleRef as { current: CodeEditorHandle }).current = {
+      insertAtCursor(text, caretOffset) {
+        const el = inputRef.current;
+        const s = el?.selectionStart ?? value.length;
+        const e = el?.selectionEnd ?? value.length;
+        const next = value.slice(0, s) + text + value.slice(e);
+        onChange(next);
+        const pos = caretOffset != null ? s + caretOffset : s + text.length;
+        requestAnimationFrame(() => {
+          if (el) { el.selectionStart = el.selectionEnd = pos; el.focus(); }
+        });
+      },
+      dedentCurrentLine() { /* no-op: a single-line blank has nothing to dedent */ },
+      focus() { inputRef.current?.focus(); },
+    };
+  }, [value, onChange]);
+
+  const prompt = step.prompt ?? "";
+  const match = prompt.match(/_+/);
+  const chip = (
+    <input
+      ref={inputRef}
+      type="text"
+      class="blank-chip mono"
+      aria-label="Fill in the blank"
+      value={value}
+      spellcheck={false}
+      autocorrect="off"
+      autocapitalize="off"
+      autocomplete="off"
+      onInput={(e) => onChange((e.target as HTMLInputElement).value)}
+    />
+  );
+
+  return (
+    <div style={{ margin: "12px 0" }}>
+      {match && match.index != null ? (
+        <p class="prose">
+          {prompt.slice(0, match.index)}
+          {chip}
+          {prompt.slice(match.index + match[0].length)}
+        </p>
+      ) : (
+        <>
+          <p class="prose">{prompt}</p>
+          <label class="dim-label" style={{ display: "block", marginBottom: "6px" }}>your answer</label>
+          {chip}
+        </>
+      )}
+      <KeyRow editorRef={handleRef} />
+    </div>
+  );
+}
+
+function McqCapture({
+  step, selected, onSelect, localGrade, missCount,
+}: { step: Step; selected: number | null; onSelect: (i: number) => void; localGrade?: LocalGradeResult | null; missCount: number }) {
+  const choices = step.choices ?? [];
+  const showedAWrongPick = !!localGrade && !localGrade.passed;
+  const revealCorrect = showedAWrongPick && mcqRevealsAnswer(missCount);
+  return (
+    <div role="radiogroup" aria-label={step.prompt ?? "Choose one"} style={{ margin: "12px 0" }}>
+      <p class="prose">{step.prompt}</p>
+      {choices.map((choice, i) => {
+        const isSelected = selected === i;
+        const looksLikeCode = !/\s/.test(choice.trim()) && choice.trim().length > 0;
+        const isWrongPick = showedAWrongPick && isSelected && !revealCorrect;
+        const isRevealedCorrect = revealCorrect && i === step.answerIndex;
+        return (
+          <label key={i} class={`mcq-row${isSelected ? " sel" : ""}`}>
+            <input
+              type="radio"
+              name={`mcq-${step.id}`}
+              checked={isSelected}
+              onChange={() => onSelect(i)}
+            />
+            <span class={looksLikeCode ? "mono" : undefined}>{choice}</span>
+            {isWrongPick && <span class="mark not-this-one"><IconX /> not this one</span>}
+            {isRevealedCorrect && <span class="mark this-one"><IconCheckBig /> it is this one</span>}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function ParsonsCapture({
+  step, order, onReorder, localGrade, missCount,
+}: { step: Step; order: number[]; onReorder: (next: number[]) => void; localGrade?: LocalGradeResult | null; missCount: number }) {
+  const scrambled = step.scrambled ?? [];
+  const effectiveOrder = order.length === scrambled.length ? order : scrambled.map((_, i) => i);
+  const showedAMiss = !!localGrade && !localGrade.passed;
+  const settled = showedAMiss ? parsonsSettledMask(effectiveOrder, step) : null;
+  const revealOrder = showedAMiss && parsonsRevealsOrder(missCount);
+  const [announcement, setAnnouncement] = useState("");
+
+  function move(pos: number, dir: -1 | 1) {
+    const target = pos + dir;
+    if (target < 0 || target >= effectiveOrder.length) return;
+    const next = effectiveOrder.slice();
+    const line = scrambled[next[pos]!] ?? "";
+    [next[pos], next[target]] = [next[target]!, next[pos]!];
+    onReorder(next);
+    setAnnouncement(`${line} moved to position ${target + 1} of ${next.length}`);
+  }
+
+  return (
+    <div style={{ margin: "12px 0" }}>
+      <p class="prose">{step.prompt}</p>
+      <ol class="parsons-list" aria-label="Reorder these lines into a working program">
+        {effectiveOrder.map((idx, pos) => {
+          const line = scrambled[idx] ?? "";
+          return (
+            <li key={idx} class="parsons-row">
+              <span class="mono">{line}</span>
+              <span class="parsons-buttons">
+                <button
+                  type="button" class="btn btn-ghost btn-small"
+                  aria-label={`Move ${line} up`} disabled={pos === 0}
+                  onClick={() => move(pos, -1)}
+                >&uarr;</button>
+                <button
+                  type="button" class="btn btn-ghost btn-small"
+                  aria-label={`Move ${line} down`} disabled={pos === effectiveOrder.length - 1}
+                  onClick={() => move(pos, 1)}
+                >&darr;</button>
+              </span>
+              {settled && (
+                settled[pos]
+                  ? <span class="mark settled"><IconCheckBig /> home</span>
+                  : <span class="mark move-me">move me</span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <div aria-live="polite" class="visually-hidden">{announcement}</div>
+      <p class="dim-label">move-up / move-down reorders; drag is a future enhancement, the buttons are the accessible primary (F23)</p>
+      {revealOrder && (
+        <div class="card" style={{ marginTop: "10px", padding: "10px 12px" }}>
+          <div class="dim-label" style={{ marginBottom: "6px" }}>the order that works</div>
+          {(step.solutionOrder ?? []).map((idx, i) => <div key={i} class="mono">{scrambled[idx]}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExercisePromptBody({ step, answer, onAnswerChange, localGrade, missCount }: {
+  step: Step; answer?: AnswerState; onAnswerChange?: (next: AnswerState) => void;
+  localGrade?: LocalGradeResult | null; missCount: number;
+}) {
   switch (step.kind) {
-    case "mcq":
-      return (
-        <fieldset style={{ border: 0, padding: 0, margin: "12px 0" }}>
-          <legend class="prose">{step.prompt}</legend>
-          {(step.choices ?? []).map((choice, i) => (
-            <label key={i} style={{ display: "block", padding: "6px 0" }}>
-              <input type="radio" name={`mcq-${step.id}`} value={i} /> {choice}
-            </label>
-          ))}
-        </fieldset>
-      );
-    case "parsons":
+    case "predictOutput":
+    case "traceTable":
+      // G1: the code is read here (so there is something to predict); the actual typed prediction
+      // field lives in the WORK pane (LearnScreen.tsx), styled to echo the OutputStream, NOT here.
       return (
         <div style={{ margin: "12px 0" }}>
           <p class="prose">{step.prompt}</p>
-          <ol style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}>
-            {(step.scrambled ?? []).map((line, i) => <li key={i}>{line}</li>)}
-          </ol>
-          <p class="dim-label">drag to reorder (touch/keyboard reorder wired at build time)</p>
+          {step.code && (
+            <pre class="mono card" style={{ padding: "12px 14px", marginTop: "10px", whiteSpace: "pre" }}>{step.code}</pre>
+          )}
         </div>
+      );
+    case "mcq":
+      return (
+        <McqCapture
+          step={step}
+          selected={answer?.mcqIndex ?? null}
+          onSelect={(i) => onAnswerChange?.({ ...(answer as AnswerState), mcqIndex: i })}
+          localGrade={localGrade}
+          missCount={missCount}
+        />
+      );
+    case "fillBlank":
+      return (
+        <FillBlankCapture
+          step={step}
+          value={answer?.fillBlank ?? ""}
+          onChange={(v) => onAnswerChange?.({ ...(answer as AnswerState), fillBlank: v })}
+        />
+      );
+    case "parsons":
+      return (
+        <ParsonsCapture
+          step={step}
+          order={answer?.parsonsOrder ?? (step.scrambled ?? []).map((_, i) => i)}
+          onReorder={(next) => onAnswerChange?.({ ...(answer as AnswerState), parsonsOrder: next })}
+          localGrade={localGrade}
+          missCount={missCount}
+        />
       );
     default:
       return step.prompt ? <p class="prose">{step.prompt}</p> : null;
   }
 }
 
-export function LessonPane({ moduleTitle, lesson, stepIndex, onTryItRun, onEnterBoss }: LessonPaneProps) {
+export function LessonPane({ moduleTitle, lesson, stepIndex, onTryItRun, onEnterBoss, answer, onAnswerChange, localGrade, missCount = 0 }: LessonPaneProps) {
   const step = lesson.steps[stepIndex];
   const [tryOut, setTryOut] = useState<string | null>(null);
   const [tryCode] = useState(step?.code ?? "");
@@ -73,10 +269,10 @@ export function LessonPane({ moduleTitle, lesson, stepIndex, onTryItRun, onEnter
         </div>
       )}
 
-      {step.kind !== "prose" && step.kind !== "liveExample" && step.kind !== "reflection" && (
+      {step.kind !== "prose" && step.kind !== "liveExample" && step.kind !== "reflection" && step.kind !== "boss" && (
         <div class="turn" style={{ marginTop: "20px", padding: "16px", borderLeft: "3px solid var(--pink)", background: "var(--pink-wash-min)", borderRadius: "0 10px 10px 0" }}>
           <b>Your turn.</b>
-          <ExercisePromptBody step={step} />
+          <ExercisePromptBody step={step} answer={answer} onAnswerChange={onAnswerChange} localGrade={localGrade} missCount={missCount} />
         </div>
       )}
 

@@ -332,7 +332,8 @@ export function App({ store }: AppProps) {
           learnView={learnView} lessonIndex={lessonIndex} completedNodes={completedNodes}
           onNavigate={setLearnView} onOpenInSandbox={() => setSurface("sandbox")}
           onLessonStepComplete={handleLessonStepComplete}
-          onEnterBoss={(moduleId) => setActiveBossModuleId(moduleId)} />
+          onEnterBoss={(moduleId) => setActiveBossModuleId(moduleId)}
+          workerReady={runtimeState === "warm"} />
       )}
       {surface === "sandbox" && (
         <SandboxScreen worker={worker} inputCapable={inputCapable} drainedFiles={drainedFiles} store={store} />
