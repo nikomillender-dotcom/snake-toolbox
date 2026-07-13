@@ -250,7 +250,21 @@ function ExercisePromptBody({ step, answer, onAnswerChange, localGrade, missCoun
 export function LessonPane({ moduleTitle, lesson, stepIndex, onTryItRun, onEnterBoss, answer, onAnswerChange, localGrade, missCount = 0 }: LessonPaneProps) {
   const step = lesson.steps[stepIndex];
   const [tryOut, setTryOut] = useState<string | null>(null);
-  const [tryCode] = useState(step?.code ?? "");
+  const [tryCode, setTryCode] = useState(step?.code ?? "");
+
+  // Manager fix round, bug 2 side-effect: LessonPane is a PERSISTENT instance across step
+  // navigation (it is never remounted when stepIndex changes), so the two lines above only ever
+  // ran once, at the very first step this instance ever rendered. Before Back/Next existed the
+  // only way to move between steps was CheckResult's post-pass Next, and no real lesson happens to
+  // land on a liveExample step right after a graded pass, so this was never actually reachable.
+  // The new persistent step nav makes it trivially reachable (Next from ANY step into the next
+  // liveExample one), which showed up immediately as an empty "try it" code block. Re-sync both on
+  // every step change so a liveExample step always shows its OWN code, not whatever the instance's
+  // first-ever step happened to carry.
+  useEffect(() => {
+    setTryCode(step?.code ?? "");
+    setTryOut(null);
+  }, [step?.id]);
 
   async function runTryIt() {
     if (!onTryItRun) return;

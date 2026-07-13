@@ -24,6 +24,19 @@ describe("CheckResult (L2/3.4 auto-check flow)", () => {
     expect(onNext).toHaveBeenCalled();
   });
 
+  // Manager fix round, bug 3 (Next was a silent no-op on the last step): isLastStep relabels the
+  // SAME pass-card action honestly instead of offering a "Next ->" that would have nothing to
+  // advance to. The label is the only thing this component owns; what actually happens on click is
+  // entirely up to the caller's onNext (LearnScreen.goNext routes to the module screen).
+  it("on the last step, the pass card's action reads 'Finish lesson', never 'Next ->', and still calls the same onNext", () => {
+    const onNext = vi.fn();
+    render(<CheckResult outcome={{ passed: true, results: passingResults }} stepId="s1" hints={[]} onNext={onNext} isLastStep />);
+    expect(screen.getByText(/Nice\. Step cleared\./)).toBeInTheDocument();
+    expect(screen.queryByText("Next ->")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Finish lesson"));
+    expect(onNext).toHaveBeenCalled();
+  });
+
   it("renders the fail state with the friendly actual-vs-expected diff", () => {
     render(<CheckResult outcome={{ passed: false, results: failingResults }} stepId="s1" hints={["Put the whole sentence inside print()"]} />);
     expect(screen.getByText(/one requirement short/)).toBeInTheDocument();

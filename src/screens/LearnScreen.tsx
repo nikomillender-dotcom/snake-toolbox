@@ -13,6 +13,7 @@ import { LessonPane } from "../components/LessonPane";
 import { PredictionField } from "../components/PredictionField";
 import { DegradedBootBanner } from "../components/DegradedBootBanner";
 import { RestartConfirmDialog } from "../components/RestartConfirmDialog";
+import { StepNav } from "../components/StepNav";
 import {
   type AnswerState,
   type LocalGradeResult,
@@ -231,18 +232,29 @@ function LessonPlayer({
   onNavigate, onOpenInSandbox, onLessonStepComplete, onEnterBoss,
   completedNodes, focusStepId, workerReady
 }: LessonPlayerProps) {
-  // Start at the focusStepId if provided, else first incomplete step
+  // Manager fix round, bug 1 (never-started lessons opened past the teaching): focusStepId
+  // deep-links keep top priority, unchanged. Otherwise, the OLD rule ("first incomplete emitting
+  // step") landed a totally fresh lesson on its first EXERCISE, since prose/liveExample never emit
+  // and so are never "complete" either, every emitting step reads as "incomplete" on a fresh
+  // lesson, and the first one of those wins. The fix separates the two real cases: a lesson with
+  // ZERO completed emitting steps has never been started, so it opens at step 0, teaching first. A
+  // lesson with SOME progress resumes right after the LAST completed emitting step (clamped to the
+  // final step), so a returning learner re-enters exactly where they left off instead of
+  // re-reading everything from the top.
   const initialStep = useMemo(() => {
     if (focusStepId) {
       const idx = lesson.steps.findIndex(s => s.id === focusStepId);
       if (idx >= 0) return idx;
     }
-    // First incomplete emitting step
+    let lastCompletedEmittingIdx = -1;
     for (let i = 0; i < lesson.steps.length; i++) {
       const s = lesson.steps[i]!;
-      if (COMPLETION_EMITTING_KINDS.has(s.kind) && !completedNodes.some(n => n.nodeId === s.id)) return i;
+      if (COMPLETION_EMITTING_KINDS.has(s.kind) && completedNodes.some(n => n.nodeId === s.id)) {
+        lastCompletedEmittingIdx = i;
+      }
     }
-    return 0;
+    if (lastCompletedEmittingIdx === -1) return 0; // never started: zero completed emitting steps
+    return Math.min(lastCompletedEmittingIdx + 1, lesson.steps.length - 1);
   }, [lesson, focusStepId, completedNodes]);
 
   const [stepIndex, setStepIndex] = useState(initialStep);
@@ -411,6 +423,32 @@ function LessonPlayer({
     setActiveInput(null);
   }
 
+  // Manager fix round, bugs 2/3 (persistent step nav + honest last-step action). isLastStep is
+  // purely structural (the final step in lesson.steps), independent of graded/non-graded.
+  const isLastStep = stepIndex === lesson.steps.length - 1;
+  function goBack() {
+    setStepIndex(i => Math.max(i - 1, 0));
+  }
+  // The SAME handler backs both CheckResult's post-pass Next and StepNav's persistent Next (bug 3):
+  // on the last step there is nothing left to advance TO, so this becomes the lesson-complete
+  // action and routes back to the module screen (the same destination the top bar's "Back to
+  // {mod.title}" already uses), instead of silently clamping to a step index that never moves.
+  function goNext() {
+    if (isLastStep) {
+      onNavigate({ view: "module", moduleId: mod.id });
+      return;
+    }
+    setStepIndex(i => Math.min(i + 1, lesson.steps.length - 1));
+  }
+  // Bug 2: Next is offered on the persistent StepNav ONLY for a non-graded step (route "none":
+  // prose/liveExample/reflection, always free to move past) OR a graded step that is ALREADY
+  // complete. "Already complete" is read from completedNodes (the same honest progress log G17
+  // writes to), never from local answer/grade state, which is ephemeral and resets on step change
+  // (so backing into an already-cleared graded step and moving forward again still works). An
+  // un-passed graded step satisfies neither condition, so this can never be used to skip an
+  // un-passed Check; that flow keeps gating Next through CheckResult exactly as it does today.
+  const canGoNextViaStepNav = route === "none" || isStepComplete(step.id, completedNodes);
+
   // grading-interaction-spec G6/G8/G10: mcq/fillBlank/parsons capture their answer inside
   // LessonPane's "Your turn" block, so it needs the live answer/grade state. Not memoized (it
   // changes on every keystroke/selection/reorder for those kinds; Preact re-renders are cheap).
@@ -460,6 +498,18 @@ function LessonPlayer({
       </div>
 
       <DegradedBootBanner inputCapable={inputCapable} />
+
+      {/* Bug 2/3: a persistent step-nav bar, mounted once regardless of portrait segment (a prose/
+          liveExample/reflection step has no Check flow at all, so without this it had no forward
+          navigation whatsoever; on the last step, Next becomes the honest lesson-complete action,
+          bug 3). */}
+      <StepNav
+        canGoBack={stepIndex > 0}
+        canGoNext={canGoNextViaStepNav}
+        isLastStep={isLastStep}
+        onBack={goBack}
+        onNext={goNext}
+      />
 
       <div class="player" style={{ display: "flex", flex: 1, minHeight: 0 }}>
         {(!portrait || segment === "lesson") && teacherPane}
@@ -514,7 +564,8 @@ function LessonPlayer({
                   modelSolution={step.modelSolution}
                   yourCode={code}
                   onOpenInSandbox={() => onOpenInSandbox?.(code)}
-                  onNext={() => setStepIndex(i => Math.min(i + 1, lesson.steps.length - 1))}
+                  onNext={goNext}
+                  isLastStep={isLastStep}
                 />
               </>
             )}

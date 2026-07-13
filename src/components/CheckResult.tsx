@@ -24,9 +24,16 @@ export interface CheckResultProps {
   yourCode?: string;
   onOpenInSandbox?: () => void;
   onNext?: () => void;
+  // Manager fix round, bug 3 (Next was a silent no-op on the last step): on the lesson's final
+  // step, this pass card's action is no longer "advance to a step that does not exist," it is the
+  // lesson-complete moment. Relabel honestly ("Finish lesson" instead of "Next ->"); the CALLER's
+  // onNext decides what actually happens (LearnScreen.goNext routes to the module screen when
+  // there is no next step to advance to). Defaults false so every existing call site (mid-lesson
+  // passes) is unchanged.
+  isLastStep?: boolean;
 }
 
-export function CheckResult({ outcome, stepId, hints, modelSolution, yourCode, onNext, onOpenInSandbox }: CheckResultProps) {
+export function CheckResult({ outcome, stepId, hints, modelSolution, yourCode, onNext, onOpenInSandbox, isLastStep = false }: CheckResultProps) {
   const [hintsShown, setHintsShown] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
 
@@ -44,7 +51,7 @@ export function CheckResult({ outcome, stepId, hints, modelSolution, yourCode, o
           <div class="res-head"><IconCheckBig /> Nice. Step cleared.</div>
           <p>You proved it, not just guessed it. On to the next one.</p>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            <button type="button" class="btn btn-primary btn-small" onClick={onNext}>Next -&gt;</button>
+            <button type="button" class="btn btn-primary btn-small" onClick={onNext}>{isLastStep ? "Finish lesson" : "Next ->"}</button>
             {onOpenInSandbox && (
               <button type="button" class="btn btn-ghost btn-small" onClick={onOpenInSandbox}>Open in Sandbox</button>
             )}

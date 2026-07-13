@@ -4,7 +4,7 @@ import { LearnScreen } from "../src/screens/LearnScreen";
 import { createMockWorkerClient } from "../src/mocks/workerMock";
 import { FIXTURE_BUNDLE } from "../src/mocks/curriculumFixture";
 import { REAL_CURRICULUM_BUNDLE } from "../src/curriculum/realCurriculumBundle";
-import type { CurriculumBundle, Module, Lesson } from "../src/contracts";
+import type { CompletedNode, CurriculumBundle, Module, Lesson } from "../src/contracts";
 import { makeInMemoryStore } from "../src/engine/fixtures/inMemoryStore.fixture";
 
 // G17 App-level test only: mock the real worker client so App boots under jsdom (no Web Worker
@@ -37,17 +37,30 @@ const defaultProps = () => ({
   onNavigate: () => {},
 });
 
-// Renders LearnScreen against the REAL curriculum bundle, jumped directly to one step via
-// focusStepId (R1), the same deep-link mechanism a glossary/review re-visit uses.
-function renderReal(lessonId: string, focusStepId: string, extra: Partial<Parameters<typeof LearnScreen>[0]> = {}) {
+// Makes a minimal, real-shape CompletedNode for the fix-round landing/nav tests below. moduleId is
+// derived from the nodeId's module prefix ("m01-l2-s3" -> "m01") the same way every real id is
+// authored, so callers only ever need to name the step id + kind.
+function completedNode(nodeId: string, kind: CompletedNode["kind"]): CompletedNode {
+  return { nodeId, kind, moduleId: nodeId.split("-")[0]!, strand: "core", timestamp: Date.now() };
+}
+
+// Renders LearnScreen against the REAL curriculum bundle. focusStepId, when given, jumps directly
+// to one step (R1), the same deep-link mechanism a glossary/review re-visit uses; omitted, the
+// lesson lands wherever LearnScreen's own initial-step rule (bug 1) puts it, exactly like a real
+// nav-in from the module list. `extra` is spread LAST, so it can override completedNodes/onNavigate
+// too (both are otherwise defaulted to empty/no-op below).
+function renderReal(lessonId: string, focusStepId?: string, extra: Partial<Parameters<typeof LearnScreen>[0]> = {}) {
   const worker = createMockWorkerClient({ delayMs: 5 });
   const onLessonStepComplete = vi.fn();
+  const learnView = focusStepId
+    ? { view: "lesson" as const, lessonId, focusStepId }
+    : { view: "lesson" as const, lessonId };
   const utils = render(
     <LearnScreen
       bundle={REAL_CURRICULUM_BUNDLE}
       worker={worker}
       inputCapable
-      learnView={{ view: "lesson", lessonId, focusStepId }}
+      learnView={learnView}
       lessonIndex={REAL_LESSON_INDEX}
       completedNodes={[]}
       onNavigate={() => {}}
@@ -349,6 +362,96 @@ describe("G0/G13 defensive clause: a step matching no grader never auto-passes",
   });
 });
 
+// Manager fix round: three interlocking lesson-FLOW bugs Niko hit playing the live app, none of
+// which the grading-round tests above ever exercised (they all deep-link straight to one step and
+// never "walk a lesson like a human"). m01-l1 (Your First Line: prose, liveExample, prose,
+// predictOutput) and m01-l2 (print, and Leaving Notes: prose, liveExample, parsons, fillBlank) are
+// the real content used throughout; see the top of this file for their exact step shapes.
+describe("lesson-flow fix round: never-started landing (bug 1)", () => {
+  it("a lesson with ZERO completed emitting steps opens at step 0 (the teaching), not at the first exercise", async () => {
+    renderReal("m01-l1"); // no focusStepId, no completedNodes: a totally fresh lesson
+    expect(await screen.findByText(/Welcome in\./)).toBeInTheDocument();
+    expect(screen.getByText("step 1 of 4")).toBeInTheDocument();
+    // The old bug landed here directly, skipping all three teaching steps.
+    expect(screen.queryByLabelText("Your prediction")).not.toBeInTheDocument();
+  });
+
+  it("a lesson with SOME progress resumes right after the LAST completed emitting step, clamped", async () => {
+    // m01-l2: s1 prose, s2 liveExample, s3 parsons (emitting, marked complete below), s4 fillBlank
+    // (emitting, not complete). Should land on s4 (index 3), not re-open s1 and not skip past s4.
+    renderReal("m01-l2", undefined, { completedNodes: [completedNode("m01-l2-s3", "parsons")] });
+    expect(await screen.findByLabelText("Fill in the blank")).toBeInTheDocument();
+    expect(screen.getByText("step 4 of 4")).toBeInTheDocument();
+  });
+});
+
+describe("lesson-flow fix round: persistent Back/Next step nav (bug 2)", () => {
+  it("Next and Back walk a non-graded (prose/liveExample) run of steps; Back is disabled on step 1", async () => {
+    renderReal("m01-l1"); // lands at step 0 (bug 1 fix)
+    await screen.findByText(/Welcome in\./);
+    expect(screen.getByRole("button", { name: "<- Back" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next ->" })); // s1 -> s2 (liveExample)
+    expect(await screen.findByText('print("Hello, world.")')).toBeInTheDocument(); // s2's code block
+    expect(screen.getByText("step 2 of 4")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "<- Back" })).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "<- Back" })); // s2 -> s1
+    expect(await screen.findByText(/Welcome in\./)).toBeInTheDocument();
+    expect(screen.getByText("step 1 of 4")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "<- Back" })).toBeDisabled();
+  });
+
+  it("an incomplete graded step offers NO persistent Next: Check is the only path forward (never a skip-around)", async () => {
+    // m01-l2-s3 (parsons), landed directly, never passed.
+    renderReal("m01-l2", "m01-l2-s3");
+    await screen.findAllByRole("listitem");
+    expect(screen.getByRole("button", { name: "<- Back" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next ->" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Finish lesson" })).not.toBeInTheDocument();
+  });
+
+  it("a graded step that is ALREADY complete (e.g. after backing into it) offers a persistent Next past it", async () => {
+    // m01-l2-s3 (parsons) landed directly, but marked already-complete: proves backing into a
+    // cleared graded step and moving forward again works without re-passing Check.
+    renderReal("m01-l2", "m01-l2-s3", { completedNodes: [completedNode("m01-l2-s3", "parsons")] });
+    await screen.findAllByRole("listitem");
+    const nextBtn = await screen.findByRole("button", { name: "Next ->" });
+    fireEvent.click(nextBtn); // s3 -> s4 (fillBlank)
+    expect(await screen.findByLabelText("Fill in the blank")).toBeInTheDocument();
+    expect(screen.getByText("step 4 of 4")).toBeInTheDocument();
+  });
+});
+
+describe("lesson-flow fix round: honest last-step action, never a silent no-op (bug 3)", () => {
+  it("passing the lesson's LAST step relabels CheckResult's action 'Finish lesson' and routes to the module screen", async () => {
+    const onNavigate = vi.fn();
+    // m01-l1-s4 (predictOutput) is m01-l1's last step (index 3 of 4).
+    const { onLessonStepComplete } = renderReal("m01-l1", "m01-l1-s4", { onNavigate });
+    const field = await screen.findByLabelText("Your prediction");
+    fireEvent.input(field, { target: { value: "Snake ToolBox is booting up" } });
+    fireEvent.click(screen.getByRole("button", { name: /Check/ }));
+    const finishBtn = await screen.findByRole("button", { name: "Finish lesson" });
+    expect(screen.queryByText("Next ->")).not.toBeInTheDocument(); // never the old silent-no-op label
+    expect(onLessonStepComplete).toHaveBeenCalledWith("m01", "m01-l1", "m01-l1-s4");
+
+    fireEvent.click(finishBtn);
+    expect(onNavigate).toHaveBeenCalledWith({ view: "module", moduleId: "m01" });
+  });
+
+  it("the persistent step-nav ALSO shows 'Finish lesson' (never a plain 'Next ->') when landing on an already-complete last step, and it routes to the module screen", async () => {
+    const onNavigate = vi.fn();
+    renderReal("m01-l1", "m01-l1-s4", {
+      onNavigate,
+      completedNodes: [completedNode("m01-l1-s4", "predictOutput")],
+    });
+    const finishBtn = await screen.findByRole("button", { name: "Finish lesson" });
+    expect(screen.queryByRole("button", { name: "Next ->" })).not.toBeInTheDocument();
+    fireEvent.click(finishBtn);
+    expect(onNavigate).toHaveBeenCalledWith({ view: "module", moduleId: "m01" });
+  });
+});
+
 // G17: strand carries verbatim on emission (P8), and re-passing an already-complete step is
 // deduped by nodeId (no double-count). This exercises the REAL App composition root (not just
 // LearnScreen in isolation) because the strand stamp and the dedupe both live in App.tsx's
@@ -365,7 +468,14 @@ describe("G17: strand carried verbatim on emission, dedupe on re-pass (App-level
     fireEvent.click(screen.getByText("Hello, Python")); // m01 module card (real content title)
     fireEvent.click(await screen.findByText("Your First Line")); // m01-l1 (real content title)
 
-    // m01-l1's first completion-emitting step is m01-l1-s4 (predictOutput), strand "core".
+    // Bug 1 fix: a never-started lesson now opens at step 0 (the teaching), not at the first
+    // exercise. m01-l1's step 4 (m01-l1-s4, predictOutput, strand "core") is the only completion-
+    // emitting step; steps 1 to 3 are prose/liveExample/prose. Walk them with the persistent
+    // step-nav Next control (bug 2) exactly the way a real learner would.
+    await screen.findByText(/Welcome in\./);
+    fireEvent.click(screen.getByRole("button", { name: "Next ->" })); // s1 prose -> s2 liveExample
+    fireEvent.click(screen.getByRole("button", { name: "Next ->" })); // s2 liveExample -> s3 prose
+    fireEvent.click(screen.getByRole("button", { name: "Next ->" })); // s3 prose -> s4 predictOutput
     const field = await screen.findByLabelText("Your prediction");
     fireEvent.input(field, { target: { value: "Snake ToolBox is booting up" } });
     const checkBtn = screen.getByRole("button", { name: /Check/ });
