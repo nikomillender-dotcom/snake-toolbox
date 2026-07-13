@@ -16,9 +16,13 @@ export interface ShipCelebrationProps {
   reducedMotion?: boolean;
   onDismiss: () => void;
   onRenewToken?: () => void;
+  /** Fires when the user taps "Ship to GitHub". Consent-gated: ship() fires ONLY
+   *  on this explicit tap, never silently (O10/R11). */
+  onShip?: () => void;
+  shipping?: boolean;
 }
 
-export function ShipCelebration({ open, artifactName, shipResult, attributionWarning, reducedMotion, onDismiss, onRenewToken }: ShipCelebrationProps) {
+export function ShipCelebration({ open, artifactName, shipResult, attributionWarning, reducedMotion, onDismiss, onRenewToken, onShip, shipping }: ShipCelebrationProps) {
   const [sweep, setSweep] = useState(false);
 
   useEffect(() => {
@@ -69,7 +73,16 @@ export function ShipCelebration({ open, artifactName, shipResult, attributionWar
             author mismatch). Your project still shipped, just flagging the graph honestly.
           </div>
         )}
-        <div class="row"><button type="button" class="btn btn-primary btn-small" onClick={onDismiss}>Nice</button></div>
+        <div class="row" style={{ display: "flex", gap: "10px" }}>
+          {onShip && !shipResult && (
+            <button type="button" class="btn btn-primary btn-small" onClick={onShip} disabled={shipping}>
+              {shipping ? "Shipping..." : "Ship to GitHub"}
+            </button>
+          )}
+          <button type="button" class={onShip && !shipResult ? "btn btn-ghost btn-small" : "btn btn-primary btn-small"} onClick={onDismiss}>
+            {shipResult ? "Nice" : "Maybe later"}
+          </button>
+        </div>
       </div>
     </div>
   );

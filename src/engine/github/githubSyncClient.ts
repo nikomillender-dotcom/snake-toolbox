@@ -308,7 +308,11 @@ export function createGitHubSync(deps: GitHubSyncDeps, queue: OfflineQueue = cre
       const prefix = `${artifact.folderPath}/`;
       for (const entry of entries.filter((e) => e.path.startsWith(prefix))) {
         const base64Content = await getBlob(gitDeps, entry.sha);
-        await deps.store.put("files", entry.path, { base64Content });
+        // Ruling 3 wiring: reconcile the raw { base64Content } into a proper FileBlob
+        // so the files collection holds exactly one shape.
+        const { reconcileKeepRemoteFile } = await import("./keepRemoteReconcile.js");
+        const blob = reconcileKeepRemoteFile(entry.path, base64Content);
+        await deps.store.put("files", entry.path, blob);
       }
       return { status: "live", url: `https://github.com/${conn.owner}/${conn.portfolioRepo}/tree/${conn.branch}/${artifact.folderPath}` };
     },

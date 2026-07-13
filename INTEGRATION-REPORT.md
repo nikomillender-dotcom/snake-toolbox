@@ -335,9 +335,34 @@ Items 1 and 2 now PASS locally via Playwright; live Vercel confirmation still ne
 
 ---
 
+## Micro-round: reconciler wiring, drain decoder, ship button (2026-07-12)
+
+Three loose ends Frederick caught as doable without a PAT or browser:
+
+1. **S5 reconciler wired:** `githubSyncClient.ts` keepRemote path now calls
+   `reconcileKeepRemoteFile()` instead of writing raw `{ base64Content }`. The `files`
+   collection holds exactly one shape (`FileBlob`).
+
+2. **Drain decoder fixed:** extracted `classifyBytes` as a shared helper
+   (`src/engine/classifyBytes.ts`) used by both `keepRemoteReconcile` and
+   `PyodideEngine.drainFiles`. The old `drainFiles` used `TextDecoder({fatal:false})` and
+   always stored `{text, encoding:"utf8"}`, which would have mangled binary session files.
+   Now it classifies correctly: valid UTF-8 -> text, anything else -> binary losslessly.
+   6 unit tests on the helper cover all attack cases (binary-as-.txt, BOM, gzip-as-json,
+   no-extension, empty).
+
+3. **Ship button wired:** `ShipCelebration` gains `onShip` + `shipping` props. App.tsx's
+   `handleShip` calls `githubSync.ship()` on the explicit tap only (consent property: never
+   silent, O10/R11). With no token connected, the result is the honest
+   `needsReconnect` path, which the UI already renders.
+
+Suite: 326 unit tests (325 pass, 1 skip), 2 E2E pass. Typecheck, build, both guards clean.
+
+---
+
 ## Deviations
 
-**0 deviations across all three rounds.** No contract change forced (I10 satisfied).
+**0 deviations across all rounds.** No contract change forced (I10 satisfied).
 
 ---
 

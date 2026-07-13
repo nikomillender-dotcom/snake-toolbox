@@ -11,6 +11,7 @@
 // stubs here; the REAL handshake is proven only via the manual browser harness
 // (manual-harness/pyodide-harness.html), never a unit test, per B11's testing doctrine.
 import type { FileBlob, NamespaceId } from "../../contracts.js";
+import { classifyBytes } from "../classifyBytes.js";
 import type {
   CheckOutcome,
   CheckParams,
@@ -198,13 +199,19 @@ export class PyodideEngine implements PythonEngine {
         // Skip directories and special files
         const fullPath = `${this.SESSION_DIR}/${name}`;
         try {
-          // Read as binary, then try to decode as UTF-8
+          // Read as binary, then classify via the shared helper (same logic as keepRemoteReconcile)
           const raw = this.pyodide.FS.readFile(fullPath, { encoding: "binary" }) as Uint8Array;
-          const content = new TextDecoder("utf-8", { fatal: false }).decode(raw);
+          // Use a string key for snapshot comparison (hex of first 32 bytes + length)
+          const snapKey = `${raw.length}:${Array.from(raw.slice(0, 32)).map(b => b.toString(16)).join("")}`;
           const prev = this.sessionFileSnapshots.get(name);
-          if (prev !== content) {
-            this.sessionFileSnapshots.set(name, content);
-            drained.push({ path: name, text: content, encoding: "utf8" });
+          if (prev !== snapKey) {
+            this.sessionFileSnapshots.set(name, snapKey);
+            const classified = classifyBytes(raw);
+            if (classified.kind === "text") {
+              drained.push({ path: name, text: classified.text, encoding: "utf8" });
+            } else {
+              drained.push({ path: name, bytes: raw, encoding: "binary" });
+            }
           }
         } catch {
           // Skip unreadable files (directories, etc.)

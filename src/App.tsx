@@ -109,6 +109,8 @@ export function App({ store }: AppProps) {
   const [learnView, setLearnView] = useState<LearnView>({ view: "map" });
   const [promotionData, setPromotionData] = useState<{ from: PhaseId; to: PhaseId } | null>(null);
   const [shipOffer, setShipOffer] = useState<{ moduleId: string; folderPath: string } | null>(null);
+  const [shipResult, setShipResult] = useState<import("./contracts").ShipResult | null>(null);
+  const [shipping, setShipping] = useState(false);
   // Sandbox files drained from the worker (fileDrain events)
   const [drainedFiles, setDrainedFiles] = useState<FileBlob[]>([]);
   const [storeReady, setStoreReady] = useState(false);
@@ -249,6 +251,27 @@ export function App({ store }: AppProps) {
     setLearnView({ view: "lesson", lessonId, focusStepId });
   }, []);
 
+  // Ship action: consent-gated, fires ONLY on the explicit tap (O10/R11)
+  const handleShip = useCallback(async () => {
+    if (!shipOffer || shipping) return;
+    setShipping(true);
+    try {
+      const artifact = {
+        folderPath: shipOffer.folderPath,
+        files: [],
+        readme: `# ${shipOffer.folderPath}\n\nShipped from Snake ToolBox.\n`,
+        commitMessage: `Ship ${shipOffer.folderPath}`,
+        moduleId: shipOffer.moduleId,
+      };
+      const result = await githubSync.ship(artifact);
+      setShipResult(result);
+    } catch {
+      setShipResult({ status: "needsReconnect" });
+    } finally {
+      setShipping(false);
+    }
+  }, [shipOffer, shipping, githubSync]);
+
   // Reduced motion
   useEffect(() => { document.documentElement.dataset.reducedMotion = String(reducedMotion); }, [reducedMotion]);
   useEffect(() => { if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setReducedMotion(true); }, []);
@@ -331,8 +354,9 @@ export function App({ store }: AppProps) {
           reducedMotion={reducedMotion} onClose={() => setPromotionData(null)} />
       )}
       {shipOffer && (
-        <ShipCelebration open={true} artifactName={shipOffer.folderPath} shipResult={null}
-          reducedMotion={reducedMotion} onDismiss={() => setShipOffer(null)} />
+        <ShipCelebration open={true} artifactName={shipOffer.folderPath} shipResult={shipResult}
+          reducedMotion={reducedMotion} onDismiss={() => { setShipOffer(null); setShipResult(null); }}
+          onShip={handleShip} shipping={shipping} />
       )}
       {surface === "progress" && (
         <ProgressScreen sheet={statSheet} glossaryView={glossaryView}
