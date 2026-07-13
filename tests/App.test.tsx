@@ -39,7 +39,8 @@ describe("App composition root (mocked contracts, I1 seam)", () => {
     expect(await screen.findByText("character sheet")).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByText("Learn")[0]!);
-    expect((await screen.findAllByText(/step \d of \d/)).length).toBeGreaterThan(0);
+    // With the router, Learn defaults to the map view (not a lesson) at zero progress
+    expect(await screen.findByText("Your path")).toBeInTheDocument();
   });
 
   it("has a skip link as the first focusable element (keyboard-walk entry point)", () => {

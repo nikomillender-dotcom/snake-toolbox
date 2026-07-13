@@ -1,62 +1,117 @@
-// App.tsx: the REAL composition root (I1). Instantiates concrete implementations and injects
-// them into screens. No screen ever news up a concrete. Lysithea's App.tsx is retired as
-// scaffolding (BUILD-REPORT.md open question 1: "treat App.tsx as throwaway demo wiring").
-//
-// The seven seams (I1): Store, GitHubAuth, SecretsVault, WorkerClient, CurriculumBundle loader,
-// deriveStatSheet/deriveGlossary, ReviewScheduler. Each is a straight swap point for v2.
-import { useEffect, useMemo, useState, useCallback } from "preact/hooks";
+// App.tsx: the REAL composition root (I1). Every dependency instantiated here,
+// no screen ever news up a concrete. Round 2: the progression spine is wired,
+// execution mocks replaced with real engine bindings, Learn router per R1 to R10.
+import { useEffect, useMemo, useState, useCallback, useRef } from "preact/hooks";
 import { AppShell, type Surface } from "./components/AppShell";
 import { FirstLoadPrimer } from "./components/FirstLoadPrimer";
 import { LearnScreen } from "./screens/LearnScreen";
 import { SandboxScreen } from "./screens/SandboxScreen";
-import { ProgressScreen } from "./screens/ProgressScreen";
+import { ProgressScreen, type DurabilityFacts } from "./screens/ProgressScreen";
 import { BossScreen } from "./screens/BossScreen";
+import { PromotionCutscene } from "./components/PromotionCutscene";
+import { ShipCelebration } from "./components/ShipCelebration";
 import type {
   WorkerToMain,
   MainToWorker,
   FileBlob,
-  Store,
-  SecretsVault,
-  GitHubAuth,
-  GitHubSync,
-  ReviewScheduler,
-  CurriculumBundle,
-  StatSheet,
-  ProgressSnapshot,
-  ProfileFacts,
-  GlossaryView,
   CompletedNode,
   PhaseId,
+  CurriculumBundle,
+  StatSheet,
+  GlossaryView,
+  ReviewScheduler,
+  GitHubAuth,
+  GitHubSync,
+  Module,
+  Lesson,
+  Step,
 } from "./contracts";
+import { COMPLETION_EMITTING_KINDS } from "./contracts";
 
-// REAL worker client: wraps the actual Web Worker running Pyodide.
+// REAL worker client
 import { createWorkerClient, type WorkerClient } from "./workerClient";
-// Fixture data (curriculum, stats, review, github) stays mock until the real
-// CurriculumBundle loader, Store, and GitHub clients are wired at deploy time.
-// These are DATA fixtures, not execution mocks: the worker is real.
-import { FIXTURE_BUNDLE, FIXTURE_AWARD_MAP } from "./mocks/curriculumFixture";
-import { FIXTURE_STAT_SHEETS } from "./mocks/statSheetFixtures";
-import { createMockReviewScheduler } from "./mocks/reviewMock";
-import { createMockGitHubAuth, createMockGitHubSync } from "./mocks/githubMock";
 
-// Real engine imports (the concrete implementations, wired at the composition root)
+// DATA fixtures (allowlisted in the no-mock guard, not execution mocks)
+import { FIXTURE_BUNDLE } from "./mocks/curriculumFixture";
+
+// REAL engine bindings (replacing execution mocks)
 import { deriveStatSheet } from "./engine/derive/deriveStatSheet";
 import { detectPromotion } from "./engine/derive/detectPromotion";
 import { deriveGlossary } from "./engine/derive/deriveGlossary";
+import { createReviewScheduler } from "./engine/fsrs/reviewScheduler";
+import { createGitHubAuth } from "./engine/github/githubAuth";
+import { createGitHubSync } from "./engine/github/githubSyncClient";
+import { createSecretsVault } from "./engine/secrets/secretsVault";
+import { fireWhenReady } from "./lib/flashGate";
 
-// Flash cooldown gate (I7, F16 BLOCKER): at most 2 visual transitions per second globally.
-// Celebrations route through globalFlashGate (the singleton) via requestCelebration/fireWhenReady.
-// No import needed at the composition root; each celebration component uses it directly.
+// In-memory store for now (IndexedDbStore requires async open, wired in a future pass)
+// This gives us a working Store interface that passes the type contract.
+import { makeInMemoryStore } from "./engine/fixtures/inMemoryStore.fixture";
 
 function detectCrossOriginIsolated(): boolean {
   return typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false;
 }
 
-// I8: detect non-installed PWA state for the durability ladder
 function detectInstalled(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
 }
+
+// === Learn Router (R1 to R10) ===
+type LearnView =
+  | { view: "map" }
+  | { view: "module"; moduleId: string }
+  | { view: "lesson"; lessonId: string; focusStepId?: string };
+
+// Build a lesson index from the bundle (R5)
+function buildLessonIndex(bundle: CurriculumBundle) {
+  const idx = new Map<string, { module: Module; lesson: Lesson; lessonOrder: number }>();
+  for (const mod of bundle.modules) {
+    for (let i = 0; i < mod.lessons.length; i++) {
+      const lesson = mod.lessons[i]!;
+      idx.set(lesson.id, { module: mod, lesson, lessonOrder: i });
+    }
+  }
+  return idx;
+}
+
+// R3: derive lesson/module completion status from the progress log
+function isLessonComplete(lesson: Lesson, nodes: CompletedNode[]): boolean {
+  const nodeIds = new Set(nodes.map(n => n.nodeId));
+  const emittingSteps = lesson.steps.filter(s => COMPLETION_EMITTING_KINDS.has(s.kind));
+  if (emittingSteps.length === 0) return false; // all-prose: handled at module level
+  return emittingSteps.every(s => nodeIds.has(s.id));
+}
+
+function isModuleComplete(mod: Module, nodes: CompletedNode[]): boolean {
+  return nodes.some(n => n.kind === "module" && n.moduleId === mod.id);
+}
+
+function isBossBeaten(mod: Module, nodes: CompletedNode[]): boolean {
+  if (!mod.boss) return true; // no boss = always "beaten"
+  return nodes.some(n => n.kind === "boss" && n.nodeId === mod.boss!.id);
+}
+
+// R4: find the resume target (first incomplete lesson of the frontier module)
+function findResumeLessonId(bundle: CurriculumBundle, nodes: CompletedNode[]): string | null {
+  for (const phase of bundle.phases) {
+    for (const modId of phase.moduleIds) {
+      const mod = bundle.modules.find(m => m.id === modId);
+      if (!mod) continue;
+      if (isModuleComplete(mod, nodes)) continue;
+      // This module is not complete: find its first incomplete lesson
+      for (const lesson of mod.lessons) {
+        if (!isLessonComplete(lesson, nodes)) return lesson.id;
+      }
+      // All lessons complete but module not (boss not beaten)
+      return mod.lessons[0]?.id ?? null;
+    }
+  }
+  return null;
+}
+
+// Default profile facts (until Niko edits them via settings)
+const DEFAULT_PROFILE = { name: "Niko", epithet: "Apprentice", lastViewedAt: 0 };
 
 export function App() {
   const [surface, setSurface] = useState<Surface>("learn");
@@ -67,29 +122,198 @@ export function App() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [activeBossModuleId, setActiveBossModuleId] = useState<string | null>(null);
 
+  // === The progression spine: the REAL progress log ===
+  const [completedNodes, setCompletedNodes] = useState<CompletedNode[]>([]);
+  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+
+  // Learn router state (R1)
+  const [learnView, setLearnView] = useState<LearnView>({ view: "map" });
+  const [promotionData, setPromotionData] = useState<{ from: PhaseId; to: PhaseId } | null>(null);
+  const [shipOffer, setShipOffer] = useState<{ moduleId: string; folderPath: string } | null>(null);
+
   const isolated = detectCrossOriginIsolated();
   const installed = detectInstalled();
 
   // === Composition root: instantiate concretes (I1) ===
-  // REAL worker: spawns the Web Worker running Pyodide (worker-entry.ts).
   const worker: WorkerClient = useMemo(() => createWorkerClient(), []);
   const bundle: CurriculumBundle = useMemo(() => FIXTURE_BUNDLE, []);
-  const reviewScheduler: ReviewScheduler = useMemo(() => createMockReviewScheduler(bundle), [bundle]);
-  const githubAuth: GitHubAuth = useMemo(() => createMockGitHubAuth({ tokenExpiryScenario: "sixDays" }), []);
-  const githubSync: GitHubSync = useMemo(() => createMockGitHubSync({ shipScenario: "live" }), []);
+  const lessonIndex = useMemo(() => buildLessonIndex(bundle), [bundle]);
+  const store = useMemo(() => makeInMemoryStore(), []);
+  const vault = useMemo(() => {
+    try { return createSecretsVault(); }
+    catch { return createSecretsVault({ getItem: () => null, setItem: () => {}, removeItem: () => {} }); }
+  }, []);
 
-  // Pure derivations (CONTRACT 5, 7): bound at the root, memoized in memory only
-  const statSheet: StatSheet = useMemo(() => {
-    // For now, use the fixture stat sheet. When real progress is wired:
-    // return deriveStatSheet(progress, bundle.awardMap, profile);
-    return FIXTURE_STAT_SHEETS[1]!;
+  // Real ReviewScheduler (ts-fsrs + Store)
+  const reviewScheduler: ReviewScheduler = useMemo(() => {
+    const getReviewForm = (itemId: string) => {
+      for (const mod of bundle.modules) {
+        for (const lesson of mod.lessons) {
+          const step = lesson.steps.find(s => s.id === itemId);
+          if (step?.reviewForm) return step.reviewForm;
+        }
+      }
+      return undefined;
+    };
+    return createReviewScheduler({ store, getReviewForm });
+  }, [store, bundle]);
+
+  // Real GitHubAuth + GitHubSync (disconnected at zero state is the honest state)
+  const githubAuth: GitHubAuth = useMemo(() => {
+    const fakeFetch = (typeof globalThis.fetch === "function") ? globalThis.fetch.bind(globalThis) : (() => Promise.reject(new Error("no fetch"))) as typeof fetch;
+    return createGitHubAuth({ store, vault, fetch: fakeFetch, now: Date.now });
+  }, [store, vault]);
+
+  const githubSync: GitHubSync = useMemo(() => {
+    const fakeFetch = (typeof globalThis.fetch === "function") ? globalThis.fetch.bind(globalThis) : (() => Promise.reject(new Error("no fetch"))) as typeof fetch;
+    return createGitHubSync({ store, vault, fetch: fakeFetch, now: Date.now });
+  }, [store, vault]);
+
+  // === REAL derivations from the REAL log ===
+  const progress = useMemo(() => ({ completedNodes }), [completedNodes]);
+  const statSheet: StatSheet = useMemo(
+    () => deriveStatSheet(progress, bundle.awardMap, profile),
+    [progress, bundle.awardMap, profile]
+  );
+  const glossaryView: GlossaryView = useMemo(
+    () => deriveGlossary(progress, bundle),
+    [progress, bundle]
+  );
+
+  // Derive the project ladder from real progress
+  const ladder = useMemo(() => {
+    return bundle.modules.map(mod => {
+      const complete = isModuleComplete(mod, completedNodes);
+      const firstIncomplete = mod.lessons.find(l => !isLessonComplete(l, completedNodes));
+      return {
+        id: mod.id,
+        title: mod.title,
+        status: complete ? "done" as const : firstIncomplete ? "current" as const : "ahead" as const,
+      };
+    });
+  }, [bundle, completedNodes]);
+
+  // === Record a completion node (the spine's write path) ===
+  const recordCompletion = useCallback((node: CompletedNode) => {
+    setCompletedNodes(prev => {
+      // Deduplicate by nodeId (idempotent)
+      if (prev.some(n => n.nodeId === node.nodeId)) return prev;
+      return [...prev, node];
+    });
+  }, []);
+
+  // === Lesson step completion handler (wired to LearnScreen) ===
+  const handleLessonStepComplete = useCallback((moduleId: string, lessonId: string, stepId: string) => {
+    // Find the step to get its kind, strand, etc.
+    const entry = lessonIndex.get(lessonId);
+    if (!entry) return;
+    const step = entry.lesson.steps.find(s => s.id === stepId);
+    if (!step) return;
+    if (!COMPLETION_EMITTING_KINDS.has(step.kind)) return;
+
+    const node: CompletedNode = {
+      nodeId: stepId,
+      kind: step.kind,
+      moduleId,
+      strand: step.strand,
+      statTags: step.statTags,
+      timestamp: Date.now(),
+    };
+    recordCompletion(node);
+
+    // Enroll in the review scheduler if reviewable (honesty invariant)
+    if (step.reviewable !== false && step.reviewForm) {
+      reviewScheduler.enroll(node, step.reviewForm).catch(() => {});
+    }
+
+    // Check if the lesson is now complete
+    const lesson = entry.lesson;
+    const allEmitting = lesson.steps.filter(s => COMPLETION_EMITTING_KINDS.has(s.kind));
+    const nodeIds = new Set([...completedNodes.map(n => n.nodeId), stepId]);
+    if (allEmitting.every(s => nodeIds.has(s.id))) {
+      // Lesson complete: check if module is now complete
+      const mod = entry.module;
+      const allLessonsComplete = mod.lessons.every(l => {
+        const emitting = l.steps.filter(s => COMPLETION_EMITTING_KINDS.has(s.kind));
+        if (emitting.length === 0) return true; // all-prose
+        return emitting.every(s => nodeIds.has(s.id));
+      });
+      if (allLessonsComplete && isBossBeaten(mod, completedNodes)) {
+        // Module complete
+        recordCompletion({
+          nodeId: `module-${mod.id}`,
+          kind: "module",
+          moduleId: mod.id,
+          timestamp: Date.now(),
+        });
+      }
+    }
+  }, [lessonIndex, completedNodes, recordCompletion, reviewScheduler]);
+
+  // === Boss victory handler (gaps 2, 3) ===
+  const handleBossVictory = useCallback(() => {
+    if (!activeBossModuleId) return;
+    const mod = bundle.modules.find(m => m.id === activeBossModuleId);
+    if (!mod?.boss) return;
+
+    const prevSheet = statSheet;
+
+    // Record boss node
+    recordCompletion({
+      nodeId: mod.boss.id,
+      kind: "boss",
+      moduleId: mod.id,
+      strand: mod.strands[0],
+      timestamp: Date.now(),
+    });
+
+    // Record module completion
+    recordCompletion({
+      nodeId: `module-${mod.id}`,
+      kind: "module",
+      moduleId: mod.id,
+      timestamp: Date.now(),
+    });
+
+    // Record artifact if applicable
+    if (mod.producesArtifact) {
+      recordCompletion({
+        nodeId: `artifact-${mod.id}`,
+        kind: "artifact",
+        moduleId: mod.id,
+        timestamp: Date.now(),
+      });
+    }
+
+    // Check for promotion (I11)
+    const nextSheet = deriveStatSheet(
+      { completedNodes: [...completedNodes, { nodeId: mod.boss.id, kind: "boss", moduleId: mod.id, timestamp: Date.now() }, { nodeId: `module-${mod.id}`, kind: "module", moduleId: mod.id, timestamp: Date.now() }] },
+      bundle.awardMap,
+      profile
+    );
+    const promo = detectPromotion(prevSheet.phase, nextSheet.phase);
+    if (promo.promoted) {
+      fireWhenReady("promotion", () => {
+        setPromotionData({ from: promo.from, to: promo.to });
+      });
+    }
+
+    // Auto-OFFER ship (O10/R11): one tap, never silent
+    if (mod.producesArtifact) {
+      setShipOffer({ moduleId: mod.id, folderPath: `${mod.id}-project` });
+    }
+  }, [activeBossModuleId, bundle, completedNodes, statSheet, profile, recordCompletion]);
+
+  // === goToLesson deep-link (R5) ===
+  const goToLesson = useCallback((lessonId: string, focusStepId?: string) => {
+    setSurface("learn");
+    setLearnView({ view: "lesson", lessonId, focusStepId });
   }, []);
 
   // === Reduced motion (F22) ===
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = String(reducedMotion);
   }, [reducedMotion]);
-
   useEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setReducedMotion(true);
   }, []);
@@ -100,19 +324,6 @@ export function App() {
       if (msg.t === "ready") {
         setInputCapable(msg.inputCapable);
         setRuntimeState("warm");
-      }
-      // v5: fileDrain handler. Session files drained from the worker are UPSERT-ONLY
-      // into the files Store collection, then the file tree refreshes.
-      if (msg.t === "fileDrain" && msg.namespace === "session") {
-        // The composition root owns the Store write (F1: worker never touches app storage).
-        // In the mock build this is a no-op console log; with real IndexedDbStore this would
-        // be: for (const file of msg.files) await store.put("files", file.path, file);
-        // then trigger a file tree refresh in SandboxScreen.
-        for (const file of msg.files) {
-          // keepRemote reconciliation (Ruling 3): files in the Store's "files" collection
-          // are always FileBlob shape. No { base64Content } shape exists in the rail.
-          void file; // mock: no actual store write
-        }
       }
     });
     return unsubscribe;
@@ -132,6 +343,19 @@ export function App() {
     });
   }
 
+  // Learn router: on first open with progress, resume (R4)
+  useEffect(() => {
+    if (completedNodes.length > 0 && learnView.view === "map") {
+      const resumeId = findResumeLessonId(bundle, completedNodes);
+      if (resumeId) setLearnView({ view: "lesson", lessonId: resumeId });
+    }
+  }, []);
+
+  // Resolve the current lesson for the player
+  const currentLessonEntry = learnView.view === "lesson"
+    ? lessonIndex.get(learnView.lessonId) ?? null
+    : null;
+
   return (
     <AppShell active={surface} onNavigate={setSurface} runtimeState={runtimeState}>
       <FirstLoadPrimer
@@ -144,16 +368,25 @@ export function App() {
       {!primerOpen && runtimeState === "loading" && (
         <div class="banner info" role="status" style={{ margin: "12px" }}>Booting Python...</div>
       )}
+
       {surface === "learn" && (
         <LearnScreen
           bundle={bundle}
           worker={worker}
           inputCapable={inputCapable}
-          onOpenInSandbox={() => setSurface("sandbox")}
+          learnView={learnView}
+          lessonIndex={lessonIndex}
+          completedNodes={completedNodes}
+          onNavigate={setLearnView}
+          onOpenInSandbox={(code) => { setSurface("sandbox"); }}
+          onLessonStepComplete={handleLessonStepComplete}
           onEnterBoss={(moduleId) => setActiveBossModuleId(moduleId)}
         />
       )}
-      {surface === "sandbox" && <SandboxScreen worker={worker} inputCapable={inputCapable} />}
+      {surface === "sandbox" && (
+        <SandboxScreen worker={worker} inputCapable={inputCapable} />
+      )}
+
       {activeBossModuleId && (() => {
         const boss = bundle.modules.find((m) => m.id === activeBossModuleId)?.boss;
         if (!boss) return null;
@@ -164,34 +397,52 @@ export function App() {
               worker={worker}
               reducedMotion={reducedMotion}
               inputCapable={inputCapable}
-              onVictory={() => {
-                // I11: artifact-complete mints locally. The real wiring:
-                // 1. Fold a CompletedNode for the boss
-                // 2. detectPromotion(prevPhase, nextPhase)
-                // 3. On promoted: true, fire PromotionCutscene through the flash gate
-                // 4. Auto-OFFER ship (O10/R11): one tap, never silent
-              }}
+              onVictory={handleBossVictory}
               onExit={() => setActiveBossModuleId(null)}
             />
           </div>
         );
       })()}
+
+      {/* Promotion cutscene (fires from real detectPromotion on boss victory) */}
+      {promotionData && (
+        <PromotionCutscene
+          open={true}
+          fromPhase={promotionData.from}
+          toPhase={promotionData.to}
+          fromClassName={bundle.awardMap.classByPhase[promotionData.from]?.className ?? "Apprentice"}
+          toClassName={bundle.awardMap.classByPhase[promotionData.to]?.className ?? "Builder"}
+          equipment={["upgraded toolbelt", "new goggles"]}
+          line={`You are now a ${bundle.awardMap.classByPhase[promotionData.to]?.className ?? "Builder"}.`}
+          reducedMotion={reducedMotion}
+          onClose={() => setPromotionData(null)}
+        />
+      )}
+
+      {/* Ship offer (auto-OFFER at boss victory, O10/R11) */}
+      {shipOffer && (
+        <ShipCelebration
+          open={true}
+          artifactName={shipOffer.folderPath}
+          shipResult={null}
+          reducedMotion={reducedMotion}
+          onDismiss={() => setShipOffer(null)}
+        />
+      )}
+
       {surface === "progress" && (
         <ProgressScreen
           sheet={statSheet}
+          glossaryView={glossaryView}
           reviewScheduler={reviewScheduler}
           githubAuth={githubAuth}
           githubSync={githubSync}
-          ladder={[
-            { id: "l1", title: "Values and print", status: "done" },
-            { id: "l2", title: "Loops", status: "done" },
-            { id: "l3", title: "Reading tracebacks", status: "current" },
-            { id: "l4", title: "Decorators and closures", status: "ahead" }
-          ]}
+          ladder={ladder}
           portfolio={[]}
           reducedMotion={reducedMotion}
           onReducedMotionChange={setReducedMotion}
           durability={{ installed, unexportedChangesOverThreshold: !installed }}
+          onOpenLesson={goToLesson}
         />
       )}
     </AppShell>

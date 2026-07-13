@@ -429,6 +429,57 @@ describe("WorkerProtocolEngine: loadPackage -> packageProgress", () => {
   });
 });
 
+describe("WorkerProtocolEngine: fileDrain (S6, I9 item 19)", () => {
+  it("a session run that writes a file emits fileDrain carrying it", async () => {
+    const { events, protocol } = harness();
+    await bootIsolated(protocol);
+    await protocol.handle({
+      t: "run",
+      runId: "drain1",
+      code: encodeOps([{ op: "writeSessionFile", path: "output.txt", contents: "generated output\n" }]),
+      mountFiles: [],
+      namespace: "session",
+    });
+    const drain = events.find((e) => e.t === "fileDrain");
+    expect(drain).toBeDefined();
+    if (drain?.t === "fileDrain") {
+      expect(drain.namespace).toBe("session");
+      expect(drain.runId).toBe("drain1");
+      expect(drain.files).toHaveLength(1);
+      expect(drain.files[0]?.path).toBe("output.txt");
+      expect(drain.files[0]?.text).toBe("generated output\n");
+    }
+  });
+
+  it("a graded check that writes a file does NOT emit fileDrain (isolation, F9)", async () => {
+    const { events, protocol } = harness();
+    await bootIsolated(protocol);
+    await protocol.handle({
+      t: "check",
+      runId: "drain2",
+      code: encodeOps([{ op: "writeGradingFile", path: "/grading/secret.txt", contents: "should not drain" }]),
+      mountFiles: [],
+      hiddenTests: [],
+    });
+    const drain = events.find((e) => e.t === "fileDrain");
+    expect(drain).toBeUndefined();
+  });
+
+  it("a session run that writes NO files does not emit an empty fileDrain", async () => {
+    const { events, protocol } = harness();
+    await bootIsolated(protocol);
+    await protocol.handle({
+      t: "run",
+      runId: "drain3",
+      code: encodeOps([{ op: "print", text: "no file written" }]),
+      mountFiles: [],
+      namespace: "session",
+    });
+    const drain = events.find((e) => e.t === "fileDrain");
+    expect(drain).toBeUndefined();
+  });
+});
+
 describe("WorkerProtocolEngine: figure alt text is required (F20)", () => {
   it("defaults alt to 'figure output' when the program supplied none", async () => {
     const { events, protocol } = harness();

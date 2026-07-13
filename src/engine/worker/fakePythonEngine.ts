@@ -37,6 +37,7 @@ export type FakeOp =
   | { op: "assertRandomSeedIsReset" }
   | { op: "writeGradingFile"; path: string; contents: string } // simulates a file dropped in the grading MEMFS dir
   | { op: "assertGradingFileAbsent"; path: string }
+  | { op: "writeSessionFile"; path: string; contents: string } // S6: simulates a file written in the session MEMFS dir
   | { op: "sleepForever" }; // used to test stop()/interrupt
 
 export function encodeOps(ops: FakeOp[]): string {
@@ -203,6 +204,14 @@ export class FakePythonEngine implements PythonEngine {
             hooks.onError("AssertionError", `grading file '${instr.path}' leaked across checks`, null, "");
             return { ok: false };
           }
+          break;
+        case "writeSessionFile":
+          // S6: populate drainedSessionFiles so drainFiles returns them
+          this.drainedSessionFiles.push({
+            path: instr.path,
+            text: instr.contents,
+            encoding: "utf8",
+          });
           break;
         case "sleepForever":
           // Handled by the caller (run() special-cases this before reaching execOps); if it ever

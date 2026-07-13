@@ -4,11 +4,13 @@ import { ProgressScreen } from "../src/screens/ProgressScreen";
 import { FIXTURE_STAT_SHEETS } from "../src/mocks/statSheetFixtures";
 import { createMockReviewScheduler } from "../src/mocks/reviewMock";
 import { createMockGitHubAuth, createMockGitHubSync } from "../src/mocks/githubMock";
+import { FIXTURE_GLOSSARY } from "../src/mocks/glossaryMock";
 
 function renderProgress() {
   return render(
     <ProgressScreen
       sheet={FIXTURE_STAT_SHEETS[1]}
+      glossaryView={FIXTURE_GLOSSARY}
       reviewScheduler={createMockReviewScheduler()}
       githubAuth={createMockGitHubAuth({})}
       githubSync={createMockGitHubSync({})}

@@ -9,9 +9,7 @@ import { BackupNudge, InstallHint, StorageMeter } from "../components/Durability
 import { BackupStatus, RestoreSheet, TokenExpiryBanner } from "../components/RestoreAndExpiry";
 import { GitHubConnectSheet } from "../components/GitHubConnectSheet";
 import { ThemePicker } from "../components/ThemePicker";
-import { FIXTURE_GLOSSARY } from "../mocks/glossaryMock";
-import { mockDetectPromotion } from "../mocks/deriveStatSheetMock";
-import type { PhaseId } from "../contracts";
+import type { GlossaryView, PhaseId } from "../contracts";
 
 export interface DurabilityFacts {
   installed: boolean;
@@ -22,6 +20,7 @@ export interface DurabilityFacts {
 
 export interface ProgressScreenProps {
   sheet: StatSheet;
+  glossaryView?: GlossaryView;
   reviewScheduler: ReviewScheduler;
   githubAuth: GitHubAuth;
   githubSync: GitHubSync;
@@ -30,10 +29,12 @@ export interface ProgressScreenProps {
   reducedMotion: boolean;
   onReducedMotionChange: (v: boolean) => void;
   durability?: DurabilityFacts;
+  onOpenLesson?: (lessonId: string) => void;
 }
 
 export function ProgressScreen({
   sheet,
+  glossaryView,
   reviewScheduler,
   githubAuth,
   githubSync,
@@ -41,7 +42,8 @@ export function ProgressScreen({
   portfolio,
   reducedMotion,
   onReducedMotionChange,
-  durability = { installed: false, unexportedChangesOverThreshold: false }
+  durability = { installed: false, unexportedChangesOverThreshold: false },
+  onOpenLesson
 }: ProgressScreenProps) {
   const [dueCount, setDueCount] = useState<number | null>(null);
   const [hand, setHand] = useState<DueReview[] | null>(null);
@@ -126,7 +128,7 @@ export function ProgressScreen({
         </>
       )}
 
-      {view === "glossary" && <GlossaryScreen view={FIXTURE_GLOSSARY} />}
+      {view === "glossary" && glossaryView && <GlossaryScreen view={glossaryView} onOpenLesson={onOpenLesson} />}
 
       {view === "backup" && (
         <>
@@ -154,18 +156,7 @@ export function ProgressScreen({
         onRestore={() => setRestoreOpen(false)}
         onStartFresh={() => setRestoreOpen(false)}
       />
-      <PromotionCutscene
-        open={promotionOpen}
-        fromPhase={sheet.phase}
-        toPhase={(Math.min(4, sheet.phase + 1) as PhaseId)}
-        fromClassName={sheet.className}
-        toClassName={sheet.className === "Apprentice" ? "Builder" : sheet.className === "Builder" ? "Forgemaster" : "Wayfarer"}
-        equipment={["heavy toolbelt", "goggles", "brass buckles"]}
-        line="You outgrew the starter bench. Time to build things that last."
-        reducedMotion={reducedMotion}
-        onClose={() => setPromotionOpen(false)}
-      />
-      {mockDetectPromotion(1, 2).promoted && null /* engine-shape smoke check, see tests */}
+      {/* Promotion cutscene moved to App.tsx: fires from real detectPromotion on boss victory */}
     </div>
   );
 }

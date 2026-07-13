@@ -1,8 +1,9 @@
-// workerClient.ts: the REAL main-thread WorkerClient (I1, the missing link).
+// workerClient.ts: the REAL main-thread WorkerClient (I1).
 // Instantiates worker-entry.ts as a Web Worker, adapts CONTRACT 1's message stream
 // to the WorkerClient interface every screen already consumes, and handles:
 //   - boot: gate SAB construction on crossOriginIsolated (P1 degraded path)
-//   - fatal -> respawn (F10)
+//   - fatal -> respawn with cached boot args re-sent (S1 fix)
+//   - respawn cap + backoff: max 3 attempts in 30s, then give up honestly (S1)
 //   - inputRequest/inputResponse round-trip when inputCapable
 //   - packageProgress passthrough
 //   - resetSession acks
@@ -18,10 +19,19 @@ export interface WorkerClient {
   dispose(): void;
 }
 
+const MAX_RESPAWNS = 3;
+const RESPAWN_WINDOW_MS = 30_000;
+
 export function createWorkerClient(): WorkerClient {
   const listeners = new Set<(msg: WorkerToMain) => void>();
   let disposed = false;
   let worker: Worker;
+
+  // S1: cache the last boot args so we can replay them to a respawned worker.
+  let lastBootArgs: Extract<MainToWorker, { t: "boot" }> | null = null;
+
+  // S1: respawn cap + backoff. Track recent respawn timestamps.
+  const respawnTimestamps: number[] = [];
 
   function emit(msg: WorkerToMain): void {
     if (disposed) return;
@@ -29,9 +39,6 @@ export function createWorkerClient(): WorkerClient {
   }
 
   function spawnWorker(): Worker {
-    // Vite's worker import syntax: new URL(..., import.meta.url) is statically analyzed
-    // at build time, so Vite bundles worker-entry.ts into a separate chunk and serves it
-    // correctly with the right MIME type and COOP/COEP headers.
     const w = new Worker(
       new URL("./worker-entry.ts", import.meta.url),
       { type: "module" }
@@ -53,13 +60,32 @@ export function createWorkerClient(): WorkerClient {
 
   worker = spawnWorker();
 
-  // F10: on a fatal event, the old worker is dead. Respawn a fresh one so the app
-  // can recover (the UI shows the honest crash toast and a "cold" session marker).
-  // Subscribe to our own emissions to detect fatal.
+  // S1 (F10): on a fatal event, the old worker is dead. Respawn a fresh one
+  // AND replay the cached boot args so the runtime actually comes back warm.
+  // Cap respawns to prevent unbounded loops (e.g. if worker-entry fails to load).
   function handleFatalRespawn(msg: WorkerToMain): void {
-    if (msg.t === "fatal" && !disposed) {
-      try { worker.terminate(); } catch { /* already dead */ }
-      worker = spawnWorker();
+    if (msg.t !== "fatal" || disposed) return;
+
+    // Prune old timestamps outside the window
+    const now = Date.now();
+    while (respawnTimestamps.length > 0 && respawnTimestamps[0]! < now - RESPAWN_WINDOW_MS) {
+      respawnTimestamps.shift();
+    }
+
+    if (respawnTimestamps.length >= MAX_RESPAWNS) {
+      // Respawn cap hit. Do not loop. The UI sees the fatal and shows the crash toast.
+      // The "restarting" promise stops here honestly.
+      return;
+    }
+
+    respawnTimestamps.push(now);
+
+    try { worker.terminate(); } catch { /* already dead */ }
+    worker = spawnWorker();
+
+    // Replay the boot message so the new worker actually loads Pyodide
+    if (lastBootArgs) {
+      worker.postMessage(lastBootArgs);
     }
   }
   listeners.add(handleFatalRespawn);
@@ -67,8 +93,12 @@ export function createWorkerClient(): WorkerClient {
   return {
     send(msg: MainToWorker) {
       if (disposed) return;
-      // MainToWorker messages are structured-clone safe per CONTRACT 1.
-      // SharedArrayBuffer is transferable across postMessage when COOP/COEP are set.
+
+      // Cache boot args for respawn replay (S1)
+      if (msg.t === "boot") {
+        lastBootArgs = msg;
+      }
+
       worker.postMessage(msg);
     },
 

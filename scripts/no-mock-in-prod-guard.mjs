@@ -1,6 +1,10 @@
-// Production no-mock guard: proves that no production source file (src/ excluding
-// src/mocks/) imports from src/mocks/. The mocks are for tests ONLY; production
-// code paths must never consume them. Same spirit as the worker-boundary-guard.
+// Production no-mock guard (S3): proves that no production source file (src/ excluding
+// src/mocks/ and test files) imports from src/mocks/ EXCEPT the two explicitly allowlisted
+// DATA fixtures. The mocks directory is for tests ONLY; execution mocks must never ship.
+//
+// RULE: any prod non-test file importing from /mocks/ is a violation, UNLESS the imported
+// module is on the DATA_FIXTURE_ALLOWLIST (curriculum data and stat sheet fixtures are data,
+// not execution mocks, and are acceptable until the real CurriculumBundle loader ships).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve, relative } from "node:path";
 
@@ -8,13 +12,20 @@ const ROOT = resolve(import.meta.dirname, "..");
 const SRC = join(ROOT, "src");
 const MOCKS_DIR = join(SRC, "mocks");
 
-// Pattern: any import from a path containing /mocks/
-const MOCK_IMPORT_PATTERN = /from\s+["'][^"']*\/mocks\//;
+// The DIRECTORY rule: any import from a path containing /mocks/
+const MOCK_IMPORT_PATTERN = /from\s+["'][^"']*\/mocks\/([^"']+)["']/;
 
-// Allowlist: files inside src/mocks/ can import from each other,
-// and fixture data files (curriculumFixture, statSheetFixtures) are DATA, not execution mocks,
-// so App.tsx importing them is acceptable. The guard targets the WORKER mock specifically.
-const FORBIDDEN_MOCKS = ["workerMock", "createMockWorkerClient"];
+// Allowlisted DATA fixtures (not execution mocks): these are pure data that serve as
+// stand-ins for the CurriculumBundle loader and stat sheet derivation until those are
+// wired to real content. They contain no runtime behavior, no network calls, no state.
+const DATA_FIXTURE_ALLOWLIST = new Set([
+  "curriculumFixture",
+  "statSheetFixtures",
+]);
+
+function isTestFile(path) {
+  return path.includes(".test.") || path.includes(".spec.");
+}
 
 function scanDir(dir) {
   const violations = [];
@@ -26,12 +37,14 @@ function scanDir(dir) {
 
     if (statSync(full).isDirectory()) {
       violations.push(...scanDir(full));
-    } else if ((full.endsWith(".ts") || full.endsWith(".tsx")) && !full.includes(".test.")) {
+    } else if ((full.endsWith(".ts") || full.endsWith(".tsx")) && !isTestFile(full)) {
       const content = readFileSync(full, "utf8");
       for (const [i, line] of content.split("\n").entries()) {
-        // Check for imports of the worker mock specifically
-        for (const forbidden of FORBIDDEN_MOCKS) {
-          if (line.includes(forbidden) && !line.trimStart().startsWith("//")) {
+        if (line.trimStart().startsWith("//")) continue; // skip comments
+        const match = MOCK_IMPORT_PATTERN.exec(line);
+        if (match) {
+          const importedModule = match[1].replace(/\.(ts|tsx|js)$/, "").replace(/["']$/, "");
+          if (!DATA_FIXTURE_ALLOWLIST.has(importedModule)) {
             violations.push(`${relative(ROOT, full)}:${i + 1}: ${line.trim()}`);
           }
         }
@@ -44,7 +57,7 @@ function scanDir(dir) {
 const violations = scanDir(SRC);
 
 if (violations.length > 0) {
-  console.error("PRODUCTION-MOCK VIOLATION: production code imports a test mock");
+  console.error("PRODUCTION-MOCK VIOLATION: production code imports an execution mock from /mocks/");
   for (const v of violations) console.error("  " + v);
   process.exit(1);
 } else {

@@ -17,13 +17,17 @@ export default defineConfig({
   server: {
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp"
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      // S2: mirror the vercel.json CSP on dev/preview so the E2E genuinely tests wasm-unsafe-eval
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://api.github.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     }
   },
   preview: {
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Embedder-Policy": "require-corp"
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      // S2: mirror the vercel.json CSP on dev/preview so the E2E genuinely tests wasm-unsafe-eval
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://api.github.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     }
   },
   build: {
