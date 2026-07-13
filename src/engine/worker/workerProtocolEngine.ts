@@ -66,6 +66,8 @@ export class WorkerProtocolEngine {
       inputCapable,
       pyodideVersion: msg.pyodideVersion,
       pyodideHash: msg.pyodideHash,
+      interruptBuffer: msg.interruptBuffer,
+      inputBuffer: msg.inputBuffer,
     });
     this.pyodideVersion = result.pyodideVersion;
     this.emit({ t: "ready", pyodideVersion: this.pyodideVersion, inputCapable });

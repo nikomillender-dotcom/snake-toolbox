@@ -360,17 +360,38 @@ Suite: 326 unit tests (325 pass, 1 skip), 2 E2E pass. Typecheck, build, both gua
 
 ---
 
+## Hardening round (2026-07-13)
+
+| Letter | Item | Status | Evidence |
+|---|---|---|---|
+| A | SW: build-derived cache version, network-first shell, update prompt, version stamp | DONE | sw.js reads `?v=` param from main.tsx; network-first for shell, cache-first for pyodide; update prompt via postMessage("skipWaiting") |
+| B | SAB input/interrupt handshake | DONE | PyodideEngine: setInterruptBuffer on boot, stop() writes SIGINT via Atomics.store, provideInput resolves pending input. Degraded null-SAB path unchanged. iPad Safari proof: DEFERRED (deploy) |
+| C | 401 re-queues the artifact | DONE | githubSyncClient.ts: NotConnectedError + 401 now call queue.enqueueShip before returning needsReconnect |
+| D | Storage meter + aggressive install nudge | DONE | Durability threshold: fires after first completed step or first saved file, not a vague threshold |
+| E | Canary arming + PYODIDE_VERSION constant | DONE | pyodideManifest.ts: one constant for version + hash; DEPLOY-RUNBOOK.md: ten-minute arming checklist |
+| F | Bundle validator + completeness test | DONE | bundleValidator.ts: validates Term/ReviewForm sourceLessonId, awardMap keys, unique ids, strand on emitting steps, flags all-prose; assertAllModulesCompletable: 5 tests |
+
+### Suite counts (hardening round)
+
+| Suite | Tests | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| Unit tests (49 files, vitest) | 331 | 330 | 0 | 1 |
+| E2E tests (1 file, Playwright) | 2 | 2 | 0 | 0 |
+| **Total** | **333** | **332** | **0** | **1** |
+
+---
+
 ## Deviations
 
 **0 deviations across all rounds.** No contract change forced (I10 satisfied).
 
 ---
 
-## What genuinely remains (deploy-only, real device, or Niko's token)
+## What genuinely remains (each requires a live deploy, a real device, or a real token)
 
-1. **Vercel deploy + live URL verification:** COOP/COEP + CSP confirmed locally, need live Vercel confirmation
-2. **Real iPad Safari:** SAB input/interrupt (item 3), CodeMirror 6 VoiceOver (item 4)
+1. **Vercel deploy + live URL verification:** COOP/COEP + CSP confirmed locally, need live Vercel confirmation (see DEPLOY-RUNBOOK.md)
+2. **Real iPad Safari:** SAB input/interrupt end to end (item 3), CodeMirror 6 VoiceOver (item 4)
 3. **Real PAT hands-on:** header verification against Niko's actual fine-grained PAT (checklist 27)
 4. **matplotlib Agg-backend capture:** genuinely needs live Pyodide with the package loaded via loadPackage
-5. **Byleth's curriculum content:** the Learn router + player are built, awaiting real lesson content beyond the fixture modules
+5. **Byleth's curriculum content:** the Learn router + player + bundle validator are built, awaiting real content
 6. **Real sprite art for tiers 2 to 4:** placeholder recolors, honestly labeled, await authoring

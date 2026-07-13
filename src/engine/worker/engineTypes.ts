@@ -59,6 +59,8 @@ export interface PythonEngine {
     inputCapable: boolean;
     pyodideVersion: string;
     pyodideHash: string;
+    interruptBuffer?: SharedArrayBuffer | null;
+    inputBuffer?: SharedArrayBuffer | null;
   }): Promise<{ pyodideVersion: string }>;
 
   run(params: RunParams): Promise<RunOutcome>;

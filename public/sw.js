@@ -1,16 +1,19 @@
-// Service Worker (I5, F7): versioned caches, old-cache cleanup on activate.
-// The precache manifest is load-bearing: ANY file add/delete/rename in a
-// future delta updates it.
+// Service Worker (I5, F7, hardening round A): versioned caches derived from the
+// build hash, network-first for the app shell so deploys always land, cache-first
+// for Pyodide assets (large, immutable per pinned version).
 //
-// NOTE (S4 fix): the real F7 hash-pin verification lives in PyodideEngine.boot()
-// (pyodideEngine.ts), which verifies the wasm SHA-256 before trusting the runtime.
-// The SW's job is cache management, not hash verification. The dead PYODIDE_PINS
-// constant and its overstated comment are removed per Frederick's S4 finding.
-const CACHE_VERSION = "stb-v1";
-const CACHE_NAME = `snake-toolbox-${CACHE_VERSION}`;
+// The cache version is injected at registration time via a URL parameter from
+// main.tsx (which reads __BUILD_HASH__ from Vite define). This avoids needing
+// Vite to process the SW file itself.
+
+// Parse the build hash from the SW URL's query param, fallback to "unknown"
+const params = new URL(self.location.href).searchParams;
+const BUILD_HASH = params.get("v") || "unknown";
+const CACHE_NAME = `stb-${BUILD_HASH}`;
 
 self.addEventListener("install", (event) => {
-  self.skipWaiting();
+  // Do NOT skipWaiting: let the "new version ready" prompt control the transition.
+  // The new SW waits until the user taps "update" (via a postMessage from the page).
 });
 
 self.addEventListener("activate", (event) => {
@@ -19,11 +22,18 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key.startsWith("snake-toolbox-") && key !== CACHE_NAME)
+          .filter((key) => key.startsWith("stb-") && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       )
     ).then(() => self.clients.claim())
   );
+});
+
+// Listen for "skipWaiting" message from the page (the "update now" tap)
+self.addEventListener("message", (event) => {
+  if (event.data === "skipWaiting") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
@@ -31,9 +41,11 @@ self.addEventListener("fetch", (event) => {
 
   // Never cache GitHub API calls
   if (url.hostname === "api.github.com") return;
+  // Only handle same-origin
+  if (url.origin !== self.location.origin) return;
 
-  // Cache-first for same-origin
-  if (url.origin === self.location.origin) {
+  // Pyodide assets are large and immutable per pinned version: cache-first
+  if (url.pathname.startsWith("/pyodide/")) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
@@ -46,5 +58,20 @@ self.addEventListener("fetch", (event) => {
         });
       })
     );
+    return;
   }
+
+  // App shell (HTML, JS, CSS): network-first so a deploy always lands.
+  // Falls back to cache when offline.
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request).then((c) => c || new Response("Offline", { status: 503 })))
+  );
 });

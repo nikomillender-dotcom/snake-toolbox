@@ -35,6 +35,7 @@ import { createGitHubAuth } from "./engine/github/githubAuth";
 import { createGitHubSync } from "./engine/github/githubSyncClient";
 import { createSecretsVault } from "./engine/secrets/secretsVault";
 import { fireWhenReady } from "./lib/flashGate";
+import { PYODIDE_VERSION, PYODIDE_WASM_HASH } from "./pyodideManifest";
 
 function detectCrossOriginIsolated(): boolean {
   return typeof crossOriginIsolated !== "undefined" ? crossOriginIsolated : false;
@@ -302,8 +303,8 @@ export function App({ store }: AppProps) {
   function startBoot() {
     setPrimerOpen(false); setPrimerDismissedOnce(true); setRuntimeState("loading");
     worker.send({
-      t: "boot", pyodideVersion: "314.0.2",
-      pyodideHash: "f7a8a169e513791e18fa0790fb69d6f2656b779e9012ba57e03e973f0df0b39f",
+      t: "boot", pyodideVersion: PYODIDE_VERSION,
+      pyodideHash: PYODIDE_WASM_HASH,
       interruptBuffer: isolated ? new SharedArrayBuffer(4) : null,
       inputBuffer: isolated ? new SharedArrayBuffer(4) : null
     });
@@ -363,7 +364,7 @@ export function App({ store }: AppProps) {
           reviewScheduler={reviewScheduler} githubAuth={githubAuth} githubSync={githubSync}
           ladder={ladder} portfolio={[]} reducedMotion={reducedMotion}
           onReducedMotionChange={setReducedMotion}
-          durability={{ installed, unexportedChangesOverThreshold: !installed }}
+          durability={{ installed, unexportedChangesOverThreshold: !installed && (completedNodes.length > 0 || drainedFiles.length > 0) }}
           onOpenLesson={goToLesson} />
       )}
     </AppShell>

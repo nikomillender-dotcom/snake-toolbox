@@ -270,8 +270,14 @@ export function createGitHubSync(deps: GitHubSyncDeps, queue: OfflineQueue = cre
           await queue.enqueueShip(artifact); // B15: refuse before any request, but keep the work queued
           return { status: "expiredToken" };
         }
-        if (err instanceof NotConnectedError) return { status: "needsReconnect" };
-        if (err instanceof GitHubApiError && err.status === 401) return { status: "needsReconnect" };
+        if (err instanceof NotConnectedError) {
+          await queue.enqueueShip(artifact); // C fix: keep the artifact in the durable queue
+          return { status: "needsReconnect" };
+        }
+        if (err instanceof GitHubApiError && err.status === 401) {
+          await queue.enqueueShip(artifact); // C fix: surprise-401 re-queues so reconnect + flush ships it
+          return { status: "needsReconnect" };
+        }
         if (err instanceof Error && err.message.startsWith("scanArtifact found secrets")) throw err; // F2: never silently queue a dirty scan
         await queue.enqueueShip(artifact); // network error, 5xx, rate limit: durable queue backstop (F14)
         return { status: "queued" };

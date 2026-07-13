@@ -39,6 +39,7 @@ interface MinimalPyodide {
   runPython(code: string, options?: { globals?: PyProxyDict }): unknown;
   toPy(obj: unknown): PyProxyDict;
   loadPackage(names: string | string[]): Promise<void>;
+  setInterruptBuffer(buffer: SharedArrayBuffer): void;
   FS: {
     mkdir(path: string): void;
     readdir(path: string): string[];
@@ -141,14 +142,25 @@ export class PyodideEngine implements PythonEngine {
   private pyodide!: MinimalPyodide;
   private inputCapable = false;
   private fatalCb: ((reason: FatalReason) => void) | null = null;
+  // B4: SAB refs for interrupt and input handshake
+  private interruptBuffer: SharedArrayBuffer | null = null;
+  private interruptView: Int32Array | null = null;
+  private inputBuffer: SharedArrayBuffer | null = null;
+  private inputView: Int32Array | null = null;
+  private pendingInputResolvers = new Map<string, (bytes: Uint8Array) => void>();
 
   private scratchGlobals!: PyProxyDict;
   private sessionGlobals!: PyProxyDict;
 
   constructor(private readonly options: PyodideEngineOptions = {}) {}
 
-  async boot(opts: { inputCapable: boolean; pyodideVersion: string; pyodideHash: string }): Promise<{ pyodideVersion: string }> {
+  async boot(opts: { inputCapable: boolean; pyodideVersion: string; pyodideHash: string; interruptBuffer?: SharedArrayBuffer | null; inputBuffer?: SharedArrayBuffer | null }): Promise<{ pyodideVersion: string }> {
     this.inputCapable = opts.inputCapable;
+    // B4: store the SAB refs for interrupt and input
+    this.interruptBuffer = opts.interruptBuffer ?? null;
+    this.inputBuffer = opts.inputBuffer ?? null;
+    if (this.interruptBuffer) this.interruptView = new Int32Array(this.interruptBuffer);
+    if (this.inputBuffer) this.inputView = new Int32Array(this.inputBuffer);
 
     // F7: hash-verify the highest-value executable asset BEFORE trusting it. A mismatch means a
     // corrupted or swapped runtime, DETECTED rather than silently run.
@@ -175,6 +187,10 @@ export class PyodideEngine implements PythonEngine {
     this.pyodide = await pyodideModule.loadPyodide(
       this.options.indexURL ? { indexURL: this.options.indexURL } : undefined
     );
+    // B4: wire the interrupt buffer so Pyodide checks it between Python opcodes
+    if (this.interruptBuffer) {
+      this.pyodide.setInterruptBuffer(this.interruptBuffer);
+    }
     this.pyodide.runPython(BOOTSTRAP_PY);
     this.pyodide.runPython("_capture_pristine()");
     this.scratchGlobals = this.pyodide.toPy({});
@@ -301,14 +317,22 @@ export class PyodideEngine implements PythonEngine {
   }
 
   stop(_runId: string): void {
-    // Real interrupt requires the SharedArrayBuffer + Atomics handshake (B4), proven only via the
-    // manual browser harness. This Node-oriented engine has no equivalent; documented limitation.
-    void _runId;
+    // B4: write SIGINT (2) to the interrupt buffer. Pyodide checks this between Python
+    // opcodes and raises KeyboardInterrupt. On the degraded path (no SAB), this is a no-op
+    // and the P1 error message ("input() is not available") handles it honestly.
+    if (this.interruptView) {
+      Atomics.store(this.interruptView, 0, 2); // 2 = SIGINT
+    }
   }
 
-  provideInput(_runId: string, _bytes: Uint8Array): void {
-    void _runId;
-    void _bytes;
+  provideInput(runId: string, bytes: Uint8Array): void {
+    // B4: write the input bytes to the input buffer and notify the waiting worker thread.
+    // The worker's input() blocks on Atomics.wait; this unblocks it with the response.
+    const resolver = this.pendingInputResolvers.get(runId);
+    if (resolver) {
+      this.pendingInputResolvers.delete(runId);
+      resolver(bytes);
+    }
   }
 
   async loadPackage(
