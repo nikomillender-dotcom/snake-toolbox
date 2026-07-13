@@ -1,0 +1,48 @@
+name: canary-keepalive
+
+# D2 (integration-overview.md I13). GitHub auto-DISABLES a scheduled workflow after 60 consecutive
+# days with no COMMIT activity in the repo, and the disable ALSO kills that file's
+# workflow_dispatch, so the manual "run now" fallback dies with the cron. Issues, tags, and merged
+# PRs do NOT reset the timer, only a commit does. Niko commits only as he progresses, so a
+# 60-day-plus dormant stretch is entirely plausible, exactly the stretch when the canary matters
+# most. Fix: a heartbeat commit well under 60 days (every ~3 weeks here), which resets the timer
+# and keeps BOTH canary.yml's cron and its workflow_dispatch alive.
+#
+# This is its OWN workflow (not a job inside canary.yml) because it needs `contents: write`, a
+# different, larger grant than the canary's `issues: write`; keeping it separate means the canary
+# workflow itself never needs write access to repo contents (minimal grants, never a blanket
+# write-all, per D1's discipline extended here).
+#
+# Re-enable path if GitHub ever DOES disable this workflow (e.g. the very first 60+ days before
+# this file existed, or a manual disable): go to the Actions tab, re-enable the workflow, or push
+# any commit, then fire workflow_dispatch once to confirm both the keepalive and canary.yml are
+# live again. A disabled canary is a known, recoverable state, not a mystery.
+
+on:
+  schedule:
+    - cron: "0 5 3,17 * *" # twice a month (the 3rd and 17th), well under the 60-day disable window
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Touch the heartbeat file
+        run: |
+          mkdir -p .github
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/canary-heartbeat
+      - name: Commit if changed
+        run: |
+          git config user.name "canary-keepalive"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/canary-heartbeat
+          if git diff --cached --quiet; then
+            echo "no change (unexpected, timestamp always differs; leaving a note rather than failing)"
+          else
+            git commit -m "chore: canary keepalive heartbeat"
+            git push
+          fi

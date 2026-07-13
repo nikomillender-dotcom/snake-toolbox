@@ -1,0 +1,116 @@
+name: canary
+
+# Weekly alarm on the LIVE deployment (integration-overview.md I13, DESIGN v0.4 M). Catches the
+# regression class that only appears on the deployed URL and only later: a header regression
+# killing crossOriginIsolated, a stale service worker, a Pyodide drift, a GitHub API shift, the
+# 7-day-eviction time class.
+#
+# THE CANARY MUST NEVER CONSUME THE REAL PAT (D1, the load-bearing safety call). The issue step
+# uses the AMBIENT GITHUB_TOKEN GitHub Actions injects per run (ephemeral, single-repo,
+# auto-expiring), never the app's fine-grained PAT. Any live GitHub read is read-only and
+# unauthenticated. No PAT is ever placed in an Actions secret for this workflow.
+#
+# D1: the default GITHUB_TOKEN has been read-only since 2023-02-02, so opening or commenting on an
+# issue needs an explicit `issues: write` grant, not assumed. Every grant here is minimal.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1" # weekly, Monday 06:17 UTC (off the hour, avoids the cron stampede)
+  workflow_dispatch: {} # manual "run now", e.g. right after any infra change
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  engine-verify:
+    name: Engine verify suite (fixtures, no network)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: npm ci
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Engine test suite (worker protocol, grading isolation, deriveStatSheet,
+          GitHubSync mocked, FSRS determinism, deriveGlossary, backup round-trip)
+        run: npm test
+      - name: Worker/secrets boundary guard (F1)
+        run: npm run worker-guard
+
+  live-smoke:
+    name: Live smoke test against the deployed URL (Playwright, headless)
+    runs-on: ubuntu-latest
+    needs: engine-verify
+    # PENDING (documented in .github/workflows/README.md): this job has no deployed URL to test
+    # against yet (Edelgard's integration + Vercel deploy have not landed). It is authored and
+    # reviewed now so it ships as a KNOWN, reviewed shape, but is gated off until
+    # vars.DEPLOYED_URL is configured, so an unconfigured canary reports "skipped," never a false
+    # red X that trains everyone to ignore it.
+    if: vars.DEPLOYED_URL != ''
+    env:
+      DEPLOYED_URL: ${{ vars.DEPLOYED_URL }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: npm ci
+        run: npm ci
+      - name: Live smoke checks
+        run: |
+          echo "Would run against $DEPLOYED_URL:"
+          echo "  (a) app boots and the boot self-check (I4) passes"
+          echo "  (b) crossOriginIsolated === true"
+          echo "  (c) a trivial run executes end to end (print('ok') -> OutputStream shows ok)"
+          echo "  (d) a MOCK ship DRY-RUNS through the GitHubSync path (build tree/commit objects"
+          echo "      in memory, assert their shape) WITHOUT publishing; no PAT is used or needed."
+          echo "This step is a placeholder until the frontend + composition root exist"
+          echo "(Edelgard's integration). The Playwright script itself is Edelgard's to author"
+          echo "against the real DOM/service worker; this job's SHAPE (trigger, permissions,"
+          echo "gating, failure -> issue) is what Hubert owns and ships now."
+
+  alarm-on-failure:
+    name: Open (or re-open) a de-duped issue on failure
+    runs-on: ubuntu-latest
+    needs: [engine-verify, live-smoke]
+    if: always() && (needs.engine-verify.result == 'failure' || needs.live-smoke.result == 'failure')
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          # D1 (PINNED): this is the AMBIENT, per-run GITHUB_TOKEN GitHub Actions injects
+          # automatically (ephemeral, scoped to this repo, auto-expiring at job end), NEVER the
+          # app's fine-grained PAT. Do not wire the real PAT into this or any Actions secret.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `Canary failed: ${new Date().toISOString().slice(0, 10)}`;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `The weekly canary failed.\n\nRun log: ${runUrl}\n\nThis issue is the alarm; a silent red X in the Actions tab is not enough.`;
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "canary-failure",
+            });
+
+            if (existing.data.length > 0) {
+              const issue = existing.data[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Failed again: ${runUrl}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["canary-failure"],
+              });
+            }

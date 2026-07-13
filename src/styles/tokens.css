@@ -1,0 +1,91 @@
+/*
+  tokens.css, Snake ToolBox design tokens.
+  Lifted VERBATIM (hex-for-hex) from Simbo's Niko-approved mockup pack (mockups/index.html and
+  siblings), the visual ground truth per the build brief. Do not reinvent a palette here.
+
+  F18 token lint (see src/lib/tokenLint.ts / tests/tokenLint.test.ts): a pink FILL always takes
+  charcoal ink (--ink-on-pink), never parchment; --pink-deep also takes dark ink; pink washes stay
+  8 to 14 percent alpha. Console theme group (--console-*) is a SEPARATE token group from the app
+  chrome tokens, so the theme picker only ever touches console/highlight colors (L9).
+*/
+:root {
+  /* app chrome, dark (default) */
+  --ground: #161311;
+  --panel: #211C19;
+  --panel-2: #2A2420;
+  --line: rgba(237, 228, 211, 0.10);
+
+  --ink: #EDE4D3;       /* parchment ink, body text, never pure white */
+  --dim: #B7AC97;
+
+  /* the four colors, four jobs (F.3) */
+  --pink: #F5C2CE;          /* identity + every interaction */
+  --pink-deep: #E68AA5;     /* saturated pink fills */
+  --pink-wash-min: rgba(245, 194, 206, 0.08);
+  --pink-wash-max: rgba(245, 194, 206, 0.14);
+  --mint: #7BD88F;          /* success, and ONLY success */
+  --err: #E88A7C;           /* clay red: fault, and ONLY fault */
+  --brass: #E0A54C;         /* structural metal, never a button */
+
+  /* pink fills always take charcoal ink, never light text (rule 2/3, ~1.14-1.2:1 fails otherwise) */
+  --ink-on-pink: #161311;
+
+  /* console (typed output / editor), theme group is separate from app chrome */
+  --console-bg: #0E0C0B;
+  --console-cli: #EDE4D3;      /* CLI White (default) */
+  --console-green: #4EE87C;    /* Hacker Green (alternate) */
+
+  /* light mode: warm paper, same identity, lights on (Direction A's "workshop with the lights on") */
+  --ground-light: #F4EBE1;
+  --panel-light: #FFFBF4;
+  --panel-2-light: #EFE3D2;
+  --ink-light: #3A2F26;
+  --dim-light: #7A6E5D;
+  --line-light: rgba(58, 47, 38, 0.12);
+
+  /* type: three voices, each one job */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-ui: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "STB Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Monaco, Consolas, "Courier New", monospace;
+  /* pixel display face: DISPLAY ONLY (F21). Rendered as authored SVG glyphs (src/lib/pixelFont.ts),
+     not a webfont, so there is no non-integer-scale risk and no extra network asset. If a real
+     bitmap/webfont replaces it later, it must ship self-hosted woff2 + the Ark Pixel OFL license
+     text (see fonts/OFL-ark-pixel.txt placeholder) and keep the integer-scale + display-only lint. */
+
+  /* touch + radii */
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --target-min: 44px;
+  --target-primary: 56px;
+
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-button: inset 0 2px 0 rgba(255,255,255,.05), inset 0 -3px 0 rgba(0,0,0,.4), 0 3px 0 #0c0a09;
+}
+
+:root[data-theme="light"] {
+  --ground: var(--ground-light);
+  --panel: var(--panel-light);
+  --panel-2: var(--panel-2-light);
+  --ink: var(--ink-light);
+  --dim: var(--dim-light);
+  --line: var(--line-light);
+}
+
+/* console theme group: CLI White (default) */
+[data-console-theme="cli"] {
+  --console-fg: var(--console-cli);
+  --console-kw: #E68AA5;
+  --console-str: #C9B98A;
+  --console-num: #E0A54C;
+  --console-com: #8A8073;
+  --console-fn: #F5C2CE;
+}
+/* console theme group: Hacker Green. Mint success + clay-red error stay intact in BOTH themes (K3) */
+[data-console-theme="green"] {
+  --console-fg: var(--console-green);
+  --console-kw: #8CF0A8;
+  --console-str: #A7E8B5;
+  --console-num: #C7E86A;
+  --console-com: #3f7a54;
+  --console-fn: #6FEF9A;
+}
