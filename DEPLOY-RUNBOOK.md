@@ -61,3 +61,11 @@ The canary's `live-smoke` job reads `vars.DEPLOYED_URL` to know where to point P
 The pinned Pyodide version lives in ONE place: `src/pyodideManifest.ts`.
 A version bump is one change there. The boot message, the postinstall copy script,
 and the hash manifest all read from it.
+
+## The vercel.json header posture (I5)
+
+This note used to live as a `$comment` inside `vercel.json`, but Vercel's strict schema
+rejects unknown top-level keys, so it lives here now. Deploy posture: `require-corp` is
+the ONLY supported COEP value (iPad Safari has no `credentialless`). CSP `script-src`
+uses `wasm-unsafe-eval`; add `unsafe-eval` ONLY if the pinned Pyodide 314.0.2 genuinely
+requires it (hands-on verify at deploy, checklist item 2).

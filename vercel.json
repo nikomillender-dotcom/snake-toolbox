@@ -1,5 +1,4 @@
 {
-  "$comment": "Deploy posture (I5). require-corp is the ONLY supported COEP value (iPad Safari has no credentialless). CSP script-src uses wasm-unsafe-eval; add unsafe-eval ONLY if the pinned Pyodide 314.0.2 genuinely requires it (hands-on verify at deploy, checklist item 2).",
   "headers": [
     {
       "source": "/(.*)",
