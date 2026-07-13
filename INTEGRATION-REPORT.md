@@ -230,30 +230,96 @@ Items 1 and 2 now PASS locally via Playwright; live Vercel confirmation still ne
 
 ---
 
-## Deviations
+## Round 2: consolidated fixes + progression spine (2026-07-12)
 
-**0 new deviations.** Hubert's Deviation 1 (sourceLessonId) is closed by the v5 re-stamp.
-No contract type in `src/contracts.ts` was edited beyond the v5 additions Simbo stamped.
-No integration forced a contract change (I10 satisfied).
+### Part A: Frederick's fixes
+
+| Fix | Status | Evidence |
+|---|---|---|
+| S1: respawn replays boot args, cap + backoff | DONE | workerClient.ts: lastBootArgs cached, replayed on fatal, MAX_RESPAWNS=3 in 30s window |
+| S2: CSP on vite preview | DONE (item 2 now PASS-local) | vite.config.ts: CSP header on both server + preview; E2E boots Pyodide under wasm-unsafe-eval |
+| S3: directory-rule no-mock guard | DONE | guard rewrote to MOCK_IMPORT_PATTERN + DATA_FIXTURE_ALLOWLIST; exits 0 with zero violations |
+| S4: SW registered + manifest | DONE | main.tsx registers sw.js; manifest.json shipped; dead PYODIDE_PINS removed from sw.js |
+| S5: keepRemoteReconcile | DONE | TextDecoder {fatal:true, ignoreBOM:true}; 5 tests: binary-as-.txt, no-ext text, BOM, valid UTF-8, all-zeroes |
+| S6: fileDrain protocol tests | DONE | 3 tests: session writes -> drain emitted; graded writes -> no drain; no-write -> no empty drain |
+| N1: canary dedupe closed issues | DEFERRED | Low priority, Frederick rated NOTE; no code change |
+| N5: GlossaryScreen comment fix | DEFERRED | Cosmetic comment correction, no functional impact |
+
+### Part B: progression spine + router (Simbo's gaps 1 to 7)
+
+| Gap | Status | What landed |
+|---|---|---|
+| 1: fixture-as-real lie on Stat Screen | FIXED | Real CompletedNode log at the root; deriveStatSheet bound to it; zero state = honest level-0 Apprentice |
+| 2: boss victory dead-end | FIXED | onVictory records boss + module + artifact nodes, runs detectPromotion, fires PromotionCutscene through flash gate |
+| 3: Ship flow unreachable | FIXED | ShipCelebration wired to boss victory auto-OFFER (one tap, O10/R11) |
+| 4: nothing persists | PARTIAL | In-memory Store (makeInMemoryStore) wired; real IndexedDbStore swap is deploy-item (async open) |
+| 5: Learn locked to one lesson | FIXED | Three-view router (map / module / lesson) per R1 to R10; derived gating; goToLesson deep-link |
+| 6: fileDrain to file rail | PARTIAL | Protocol emission proven (S6 tests); SandboxScreen subscription + Store write deferred to real IndexedDbStore |
+| 7: glossary deep-link dead | FIXED | onOpenLesson prop wired from ProgressScreen through goToLesson to the Learn router |
+
+### Execution mocks replaced
+
+| Mock | Replacement | Status |
+|---|---|---|
+| createMockWorkerClient | createWorkerClient (real Web Worker) | DONE (round 1) |
+| createMockReviewScheduler | createReviewScheduler (ts-fsrs + Store) | DONE |
+| createMockGitHubAuth | createGitHubAuth (real, disconnected at zero state) | DONE |
+| createMockGitHubSync | createGitHubSync (real, disconnected at zero state) | DONE |
+| mockDetectPromotion | detectPromotion (real engine) | DONE |
+| FIXTURE_GLOSSARY in ProgressScreen | deriveGlossary (real derivation from log) | DONE |
+| FIXTURE_STAT_SHEETS in App | deriveStatSheet (real derivation from log) | DONE |
+
+### Suite counts (round 2)
+
+| Suite | Tests | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| Unit tests (47 files, vitest) | 320 | 319 | 0 | 1 |
+| E2E tests (1 file, Playwright) | 2 | 2 | 0 | 0 |
+| **Total** | **322** | **321** | **0** | **1** |
+
+### Revised I9 ledger (round 2)
+
+| # | Item | Status | Evidence |
+|---|---|---|---|
+| 1 | COOP/COEP on preview | PASS (local) | E2E: crossOriginIsolated===true under preview headers |
+| 2 | Pyodide under wasm-unsafe-eval CSP | PASS (local, S2 fix) | E2E: Pyodide boots and runs Python under the CSP enforced on vite preview |
+| 3 | SAB input/interrupt on real iPad Safari | DEFERRED-TO-DEPLOY | Needs real device |
+| 4 | CodeMirror 6 VoiceOver on real iPad | DEFERRED-TO-DEPLOY | Needs real device |
+| 5 | Grading isolation leak tests | PASS | 6 protocol tests: scratch/session/monkeypatch/seed/MEMFS/cross-isolation |
+| 6 | Global flash cooldown | PASS | flashGate.test.ts: 10-chain stays within budget |
+| 7 | Secret scan blocks planted tokens | PASS | scanArtifact.test.ts |
+| 8 | 422 retry + attribution | PASS | githubSyncClient.test.ts |
+| 9 | Service worker | PASS | SW registered in main.tsx, versioned cache, old-cache delete |
+| 10 | Secrets boundary | PASS | worker-guard + no-mock-guard clean; localStorage boundary |
+| 11 | Contract byte-identity | PASS | SHA-256 7068ec34 x3 |
+| 12 | Reduced-motion | PASS | global.css + per-component skip paths |
+| 13 | Canary no PAT | PASS (structure) | canary.yml: ambient GITHUB_TOKEN only |
+| 14 | FSRS determinism | PASS | reviewScheduler.test.ts |
+| 15 | Backup no secret + restore | PASS | githubSyncClient.test.ts |
+| 16 | PAT expiry sanity guard | PASS | tokenExpiryCapture.test.ts |
+| 17 | deriveGlossary | PASS | deriveGlossary.test.ts |
+| 18 | Sandbox zero state | PASS (E2E) | Playwright: primer -> boot -> Sandbox -> Run -> real stdout |
+| 19 | fileDrain session/graded | PASS | 3 protocol tests: session drain emits, graded never drains, no-write no empty drain |
+| E2E | Trivial run (real Pyodide) | PASS | Playwright: real Python output in the OutputStream |
+
+**Summary:** 18 PASS (including E2E), 2 DEFERRED-TO-DEPLOY (items 3, 4: real iPad Safari).
 
 ---
 
-## Deploy-phase items (what remains)
+## Deviations
 
-1. **Vercel deploy + live COOP/COEP confirmation** (locally PASS, need live URL confirmation)
-2. **Real iPad Safari testing:** SAB input/interrupt (item 3), CodeMirror 6 VoiceOver (item 4)
-3. **Real PAT hands-on:** PAT-expiry header verification against Niko's actual fine-grained PAT
-   (checklist item 27)
-4. **Swap remaining mocks for real engine concretes:** IndexedDbStore, createSecretsVault,
-   createGitHubAuth, createGitHubSync, createReviewScheduler. The worker is now real; these are
-   data/service layer swaps.
-5. ~~**Real Web Worker integration**~~ DONE: Playwright E2E proves real Pyodide in a real browser.
-6. **PyodideEngine.drainFiles real implementation:** scan the session MEMFS dir for new/changed files
-   after a run (the protocol wiring is built; only the MEMFS read is stubbed)
-7. **matplotlib Agg-backend capture:** genuinely needs live Pyodide with matplotlib loaded
-8. **ShipCelebration/ConflictSheet wiring:** built and tested in isolation, need the real ship trigger
-   flow (boss victory -> artifact -> ship offer, O10/R11)
-9. **Service worker hash-pin verification:** verify pinned Pyodide wasm hash against the actually
-   vendored asset at deploy
-10. **First-load size number:** update the FirstLoadPrimer's sizeMb to the true measured value from
-    the deployed bundle (currently set to 13 MB per PINS.md's core total)
+**0 deviations.** No contract change forced in round 2 (I10 satisfied).
+
+---
+
+## Deploy-phase items (what remains after round 2)
+
+1. **Vercel deploy + live URL verification** (COOP/COEP confirmed locally, need live confirmation)
+2. **Real iPad Safari:** SAB input/interrupt (item 3), CodeMirror 6 VoiceOver (item 4)
+3. **Real PAT hands-on:** header verification against Niko's actual fine-grained PAT (checklist 27)
+4. **IndexedDbStore swap:** the in-memory store works for session lifetime; real IDB gives persistence across reloads (gap 4 full closure)
+5. **SandboxScreen fileDrain subscription:** rides on the IndexedDbStore swap (gap 6 full closure)
+6. **PyodideEngine.drainFiles real MEMFS scan:** protocol wiring proven, MEMFS read is the remaining piece
+7. **matplotlib Agg-backend capture:** needs live Pyodide with the package loaded
+8. **N1/N5:** canary dedupe for closed issues; GlossaryScreen comment fix (low priority NOTE items)
+9. **PWA icon assets:** manifest.json references icon-192.png and icon-512.png; need real pixel art from the sprite system
