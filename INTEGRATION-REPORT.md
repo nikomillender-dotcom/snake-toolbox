@@ -371,13 +371,40 @@ Suite: 326 unit tests (325 pass, 1 skip), 2 E2E pass. Typecheck, build, both gua
 | E | Canary arming + PYODIDE_VERSION constant | DONE | pyodideManifest.ts: one constant for version + hash; DEPLOY-RUNBOOK.md: ten-minute arming checklist |
 | F | Bundle validator + completeness test | DONE | bundleValidator.ts: validates Term/ReviewForm sourceLessonId, awardMap keys, unique ids, strand on emitting steps, flags all-prose; assertAllModulesCompletable: 5 tests |
 
-### Suite counts (hardening round)
+### SAB input/interrupt handshake proven end to end
+
+Two Playwright E2E tests against the real Pyodide worker under COOP/COEP + CSP headers
+(headless Chromium, `crossOriginIsolated === true`, real SharedArrayBuffers):
+
+1. **input() round trip (PASS):** `name = input("your name? ")` + `print(f"hello {name}")`
+   -> InputRequest UI appears -> user types "Niko" -> program prints "hello Niko".
+   The SAB `Atomics.wait`/`Atomics.notify` handshake works: the worker blocks synchronously
+   in the Pyodide stdin callback, the main thread writes input bytes directly to the
+   inputBuffer SAB and notifies, the worker unblocks and Python receives the value.
+
+2. **Stop interrupt (PASS):** `while True: pass` -> loop runs -> user clicks Stop ->
+   main thread writes SIGINT (2) to the interruptBuffer via `Atomics.store` ->
+   `pyodide.setInterruptBuffer` catches it between opcodes and raises KeyboardInterrupt ->
+   the run terminates -> a follow-up `print("still alive")` proves the engine is still usable.
+
+**Product bugs found and fixed during this round:**
+- `pyodide.setInterruptBuffer` expects an `Int32Array`, not a raw `SharedArrayBuffer`
+  (passing the raw buffer silently did nothing; the interrupt never fired)
+- `inputBuffer` was only 4 bytes (one Int32), too small for the B4 protocol's 8-byte
+  header + data layout; raised to 4104 bytes (8 header + 4096 data)
+- Pyodide's stdout/stderr hooks needed to be wired at `loadPyodide` time so print output
+  routes through the current run's hooks
+
+**Item B now shrinks to WebKit-only:** the handshake is proven in a real browser (Chromium).
+Only iPad Safari re-verification remains on the deploy list.
+
+### Suite counts (hardening round, final)
 
 | Suite | Tests | Passed | Failed | Skipped |
 |---|---|---|---|---|
 | Unit tests (49 files, vitest) | 331 | 330 | 0 | 1 |
-| E2E tests (1 file, Playwright) | 2 | 2 | 0 | 0 |
-| **Total** | **333** | **332** | **0** | **1** |
+| E2E tests (2 files, Playwright) | 4 | 4 | 0 | 0 |
+| **Total** | **335** | **334** | **0** | **1** |
 
 ---
 
@@ -390,7 +417,7 @@ Suite: 326 unit tests (325 pass, 1 skip), 2 E2E pass. Typecheck, build, both gua
 ## What genuinely remains (each requires a live deploy, a real device, or a real token)
 
 1. **Vercel deploy + live URL verification:** COOP/COEP + CSP confirmed locally, need live Vercel confirmation (see DEPLOY-RUNBOOK.md)
-2. **Real iPad Safari:** SAB input/interrupt end to end (item 3), CodeMirror 6 VoiceOver (item 4)
+2. **Real iPad Safari (WebKit only):** SAB input/interrupt re-verified on WebKit (Chromium proven via E2E), CodeMirror 6 VoiceOver (item 4)
 3. **Real PAT hands-on:** header verification against Niko's actual fine-grained PAT (checklist 27)
 4. **matplotlib Agg-backend capture:** genuinely needs live Pyodide with the package loaded via loadPackage
 5. **Byleth's curriculum content:** the Learn router + player + bundle validator are built, awaiting real content

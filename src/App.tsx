@@ -305,8 +305,10 @@ export function App({ store }: AppProps) {
     worker.send({
       t: "boot", pyodideVersion: PYODIDE_VERSION,
       pyodideHash: PYODIDE_WASM_HASH,
+      // B4: interrupt buffer = 4 bytes (one Int32 for SIGINT flag).
+      // Input buffer = 8 bytes header (status + length) + 4KB data space.
       interruptBuffer: isolated ? new SharedArrayBuffer(4) : null,
-      inputBuffer: isolated ? new SharedArrayBuffer(4) : null
+      inputBuffer: isolated ? new SharedArrayBuffer(4096 + 8) : null
     });
   }
 

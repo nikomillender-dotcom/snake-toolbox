@@ -19,6 +19,7 @@ import type {
   PackageProgressPhase,
   PythonEngine,
   RawNamespaceEntry,
+  RunHooks,
   RunOutcome,
   RunParams,
 } from "./engineTypes.js";
@@ -37,9 +38,11 @@ interface MinimalPyodide {
   version: string;
   globals: PyProxyDict;
   runPython(code: string, options?: { globals?: PyProxyDict }): unknown;
+  runPythonAsync(code: string, options?: { globals?: PyProxyDict }): Promise<unknown>;
   toPy(obj: unknown): PyProxyDict;
   loadPackage(names: string | string[]): Promise<void>;
-  setInterruptBuffer(buffer: SharedArrayBuffer): void;
+  setInterruptBuffer(buffer: Int32Array): void;
+  setStdin(opts: { stdin: () => string }): void;
   FS: {
     mkdir(path: string): void;
     readdir(path: string): string[];
@@ -138,6 +141,19 @@ export interface PyodideEngineOptions {
   indexURL?: string;
 }
 
+// B4 SAB input handshake protocol:
+// The inputBuffer is a SharedArrayBuffer with layout:
+//   int32[0] = status: 0 = idle, 1 = data ready
+//   int32[1] = byte length of input data
+//   bytes at offset 8: the input data (UTF-8 encoded)
+// Worker (stdin callback): sets status to 0, calls Atomics.wait on [0] until !== 0
+// Main thread (provideInput via WorkerClient): writes the data, sets [1] = length, sets [0] = 1,
+//   then Atomics.notify to wake the worker.
+const INPUT_STATUS_IDLE = 0;
+const INPUT_STATUS_READY = 1;
+// Minimum inputBuffer size: 8 bytes header + at least some data space
+const INPUT_HEADER_BYTES = 8;
+
 export class PyodideEngine implements PythonEngine {
   private pyodide!: MinimalPyodide;
   private inputCapable = false;
@@ -146,8 +162,11 @@ export class PyodideEngine implements PythonEngine {
   private interruptBuffer: SharedArrayBuffer | null = null;
   private interruptView: Int32Array | null = null;
   private inputBuffer: SharedArrayBuffer | null = null;
-  private inputView: Int32Array | null = null;
-  private pendingInputResolvers = new Map<string, (bytes: Uint8Array) => void>();
+  private inputInt32: Int32Array | null = null;
+  private inputDataView: Uint8Array | null = null;
+  // Current run's hooks for forwarding inputRequest to the protocol layer
+  private currentHooks: RunHooks | null = null;
+  private currentRunId: string | null = null;
 
   private scratchGlobals!: PyProxyDict;
   private sessionGlobals!: PyProxyDict;
@@ -160,7 +179,10 @@ export class PyodideEngine implements PythonEngine {
     this.interruptBuffer = opts.interruptBuffer ?? null;
     this.inputBuffer = opts.inputBuffer ?? null;
     if (this.interruptBuffer) this.interruptView = new Int32Array(this.interruptBuffer);
-    if (this.inputBuffer) this.inputView = new Int32Array(this.inputBuffer);
+    if (this.inputBuffer) {
+      this.inputInt32 = new Int32Array(this.inputBuffer);
+      this.inputDataView = new Uint8Array(this.inputBuffer, INPUT_HEADER_BYTES);
+    }
 
     // F7: hash-verify the highest-value executable asset BEFORE trusting it. A mismatch means a
     // corrupted or swapped runtime, DETECTED rather than silently run.
@@ -179,17 +201,63 @@ export class PyodideEngine implements PythonEngine {
     }
 
     const pyodideModule = (await import("pyodide")) as unknown as {
-      loadPyodide: (opts?: { indexURL?: string }) => Promise<MinimalPyodide>;
+      loadPyodide: (opts?: { indexURL?: string; stdout?: (text: string) => void; stderr?: (text: string) => void }) => Promise<MinimalPyodide>;
     };
     // When indexURL is set (browser Worker context), loadPyodide fetches wasm + stdlib
     // from that same-origin path instead of the default CDN. This is required for
     // require-corp COEP compliance and offline operation.
-    this.pyodide = await pyodideModule.loadPyodide(
-      this.options.indexURL ? { indexURL: this.options.indexURL } : undefined
-    );
+    const loadOpts: Record<string, unknown> = {};
+    if (this.options.indexURL) loadOpts.indexURL = this.options.indexURL;
+    // Wire stdout/stderr to forward to the current run's hooks
+    loadOpts.stdout = (text: string) => { this.currentHooks?.onStdout(text + "\n"); };
+    loadOpts.stderr = (text: string) => { this.currentHooks?.onStderr(text + "\n"); };
+    // B4: wire stdin for the input() handshake via SAB Atomics.wait
+    if (this.inputCapable && this.inputInt32 && this.inputDataView) {
+      const inputInt32 = this.inputInt32;
+      const inputDataView = this.inputDataView;
+      const engine = this;
+      loadOpts.stdin = () => {
+        // Tell the main thread we need input via a postMessage (onInputRequest hook)
+        if (engine.currentHooks) {
+          engine.currentHooks.onInputRequest("");
+        }
+        // Block synchronously until the main thread writes input data via the SAB
+        Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
+        Atomics.wait(inputInt32, 0, INPUT_STATUS_IDLE);
+        // Read the input data
+        const length = Atomics.load(inputInt32, 1);
+        const data = inputDataView.slice(0, length);
+        Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
+        return new TextDecoder().decode(data);
+      };
+    }
+    this.pyodide = await pyodideModule.loadPyodide(loadOpts as { indexURL?: string });
     // B4: wire the interrupt buffer so Pyodide checks it between Python opcodes
     if (this.interruptBuffer) {
-      this.pyodide.setInterruptBuffer(this.interruptBuffer);
+      this.pyodide.setInterruptBuffer(this.interruptView!);
+    }
+    // B4: wire the stdin hook for the input() handshake
+    if (this.inputCapable && this.inputInt32 && this.inputDataView) {
+      const inputInt32 = this.inputInt32;
+      const inputDataView = this.inputDataView;
+      const engine = this;
+      this.pyodide.setStdin({
+        stdin: () => {
+          // Tell the main thread we need input
+          if (engine.currentHooks) {
+            engine.currentHooks.onInputRequest("");
+          }
+          // Block synchronously until the main thread writes input data
+          Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
+          Atomics.wait(inputInt32, 0, INPUT_STATUS_IDLE);
+          // Read the input data
+          const length = Atomics.load(inputInt32, 1);
+          const data = inputDataView.slice(0, length);
+          // Reset for next call
+          Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
+          return new TextDecoder().decode(data);
+        }
+      });
     }
     this.pyodide.runPython(BOOTSTRAP_PY);
     this.pyodide.runPython("_capture_pristine()");
@@ -277,6 +345,10 @@ export class PyodideEngine implements PythonEngine {
       this.clearGradingDir();
       this.mountFiles(params.mountFiles, GRADING_DIR);
     }
+    // Clear the interrupt buffer before each run so a stale SIGINT does not kill it
+    if (this.interruptView) Atomics.store(this.interruptView, 0, 0);
+    this.currentHooks = params.hooks;
+    this.currentRunId = params.runId;
     const globals = this.globalsFor(params.namespace);
     try {
       const result = this.pyodide.runPython(params.code, { globals });
@@ -288,6 +360,9 @@ export class PyodideEngine implements PythonEngine {
       const { errorType, message } = this.classifyError(err);
       params.hooks.onError(errorType, message, null, String(err));
       return { ok: false };
+    } finally {
+      this.currentHooks = null;
+      this.currentRunId = null;
     }
   }
 
@@ -325,14 +400,13 @@ export class PyodideEngine implements PythonEngine {
     }
   }
 
-  provideInput(runId: string, bytes: Uint8Array): void {
-    // B4: write the input bytes to the input buffer and notify the waiting worker thread.
-    // The worker's input() blocks on Atomics.wait; this unblocks it with the response.
-    const resolver = this.pendingInputResolvers.get(runId);
-    if (resolver) {
-      this.pendingInputResolvers.delete(runId);
-      resolver(bytes);
-    }
+  provideInput(_runId: string, _bytes: Uint8Array): void {
+    // B4: in the SAB approach, the main thread writes directly to the inputBuffer SAB
+    // and calls Atomics.notify, bypassing the worker's message loop entirely (because
+    // the worker is blocked on Atomics.wait and cannot process postMessage). So this
+    // method on the engine side is a no-op; the real handshake lives in workerClient.ts.
+    void _runId;
+    void _bytes;
   }
 
   async loadPackage(

@@ -28,7 +28,9 @@ test.describe("Snake ToolBox E2E (real Pyodide)", () => {
 
     // Wait for the output to show the default print output.
     // "hello from a fresh Sandbox" is the stdout from the default code.
-    await expect(page.getByText("hello from a fresh Sandbox")).toBeVisible({ timeout: 60000 });
+    // Use a specific locator to avoid strict-mode violations from the editor text
+    // and the aria-live region matching the same string.
+    await expect(page.locator(".output-stream span").filter({ hasText: "hello from a fresh Sandbox" }).first()).toBeVisible({ timeout: 60000 });
 
     // Report any page errors
     if (errors.length > 0) {
