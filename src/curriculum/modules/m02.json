@@ -1,0 +1,340 @@
+{
+  "id": "m02",
+  "title": "Values and Variables",
+  "phase": 1,
+  "strands": ["core", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["variables", "numbers", "operators", "f-strings", "booleans", "type"],
+  "lessons": [
+    {
+      "id": "m02-l1",
+      "title": "Boxes with Names",
+      "steps": [
+        {
+          "id": "m02-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["variables"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome back. Last time you made the console talk and listen. Quick warm-up before we build on it: remember that input() always hands you back text, and int() turns a string of digits into a real number. Good. Onward.\n\nRight now your programs forget everything the instant they compute it. A variable fixes that. A variable is just a labeled box: you put a value in it and stick a name on the front, and later you can grab it by name.\n\nYou make one with a single equals sign: score = 10 means put 10 into a box and label it score. From then on, wherever you write score, Python reads the value inside. The equals sign here is not the one from math class asking is this equal. It is an arrow pointing left: take the thing on the right, drop it in the box on the left."
+        },
+        {
+          "id": "m02-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["variables"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Notice how the box can be refilled with a new value.",
+          "code": "score = 10\nprint(score)\nscore = 25\nprint(score)"
+        },
+        {
+          "id": "m02-l1-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["variables"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The middle line reads the box, adds 5, and puts the result back in the same box. What prints?",
+          "code": "score = 10\nscore = score + 5\nprint(score)",
+          "expected": "15",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m02-l1",
+            "prompt": "What does this print?",
+            "code": "score = 10\nscore = score + 5\nprint(score)",
+            "expected": "15"
+          }
+        },
+        {
+          "id": "m02-l1-s4",
+          "kind": "fillBlank",
+          "conceptTags": ["variables"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Fill in the single character that puts the value 7 into a box named count: count ___ 7",
+          "expected": "=",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m02-l1",
+            "prompt": "Which character assigns a value to a variable, as in count ___ 7 ?",
+            "expected": "="
+          }
+        }
+      ]
+    },
+    {
+      "id": "m02-l2",
+      "title": "Numbers and Math",
+      "steps": [
+        {
+          "id": "m02-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["numbers", "operators"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Python does math the way you would expect, with a couple of extra tools worth knowing.\n\nThe usual crew: + add, - subtract, * multiply, / divide. One surprise: plain / always gives you a decimal, so 10 / 2 is 5.0, not 5. A number with a decimal point is called a float; a whole number is an int.\n\nThree power tools you will actually use:\n** raises to a power, so 2 ** 3 is 8 (two, three times over).\n// divides and throws away the remainder, so 17 // 5 is 3.\n% gives you just the remainder, so 17 % 5 is 2. That percent sign is oddly useful: it is how you check if a number is even (n % 2 is 0) or wrap a value around a limit."
+        },
+        {
+          "id": "m02-l2-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["operators"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The ** operator raises to a power. What prints?",
+          "code": "print(2 ** 3)",
+          "expected": "8",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m02-l2",
+            "prompt": "What does print(2 ** 3) show? (** is raise-to-a-power)",
+            "expected": "8"
+          }
+        },
+        {
+          "id": "m02-l2-s3",
+          "kind": "mcq",
+          "conceptTags": ["operators"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "You want just the REMAINDER after dividing (for example, the 2 left over from 17 divided by 5). Which operator does that?",
+          "choices": ["/", "//", "%", "**"],
+          "answerIndex": 2,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m02-l2",
+            "prompt": "Which operator gives the remainder after division?",
+            "expected": "% (the modulo operator). 17 % 5 is 2."
+          }
+        },
+        {
+          "id": "m02-l2-s4",
+          "kind": "traceTable",
+          "conceptTags": ["variables", "operators"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Trace the total box line by line, keeping track of what is inside it, then say what prints. This build-up-a-running-total move is called an accumulator.",
+          "code": "total = 0\ntotal = total + 4\ntotal = total + 6\nprint(total)",
+          "expected": "10",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m02-l2",
+            "prompt": "Trace it: what is the final value printed?",
+            "code": "total = 0\ntotal = total + 4\ntotal = total + 6\nprint(total)",
+            "expected": "10"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m02-l3",
+      "title": "f-strings: Sentences with Slots",
+      "steps": [
+        {
+          "id": "m02-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["f-strings"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Back in Module 1 you glued text and values together with +, and you had to remember str() every time a number showed up. There is a much nicer way.\n\nAn f-string is a sentence with slots. Put a letter f right before the opening quote, then drop any value straight into the text inside curly braces. Python fills each slot in for you.\n\nInstead of \"You scored \" + str(points) + \" points\", you write f\"You scored {points} points\". Same result, far less fuss, and it even does math inside the braces: f\"double is {points * 2}\". Once you meet f-strings you rarely go back to gluing with +."
+        },
+        {
+          "id": "m02-l3-s2",
+          "kind": "liveExample",
+          "conceptTags": ["f-strings"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. The values drop right into the slots.",
+          "code": "name = \"Niko\"\nscore = 42\nprint(f\"{name} scored {score} points.\")"
+        },
+        {
+          "id": "m02-l3-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["f-strings", "operators"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The braces can hold a little math too. What prints?",
+          "code": "x = 5\nprint(f\"x is {x} and double is {x * 2}\")",
+          "expected": "x is 5 and double is 10",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m02-l3",
+            "prompt": "What does this print?",
+            "code": "x = 5\nprint(f\"x is {x} and double is {x * 2}\")",
+            "expected": "x is 5 and double is 10"
+          }
+        },
+        {
+          "id": "m02-l3-s4",
+          "kind": "fixBug",
+          "conceptTags": ["f-strings", "numbers"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This function tries to build a sentence by gluing text and a number with +, which crashes because you cannot add text to a number. Fix summary() so it returns a sentence like: You have 5 points. The cleanest fix is an f-string.",
+          "starterCode": "def summary(points):\n    # points is a number, like 5\n    return \"You have \" + points + \" points.\"",
+          "hiddenTests": [
+            { "id": "m02-l3-s4-t1", "code": "assert summary(5) == \"You have 5 points.\"", "message": "summary(5) should return the exact sentence: You have 5 points." },
+            { "id": "m02-l3-s4-t2", "code": "assert summary(0) == \"You have 0 points.\"", "message": "check what happens with 0: it should read You have 0 points." }
+          ],
+          "hints": [
+            "You cannot glue text and a number with +. You would need str(points), or better, an f-string.",
+            "An f-string drops the value in for you: f\"You have {points} points.\"",
+            "return f\"You have {points} points.\""
+          ],
+          "modelSolution": "def summary(points):\n    return f\"You have {points} points.\"",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m02-l3",
+            "prompt": "Fix this so it returns a clean sentence. An f-string is the tidy way.",
+            "starterCode": "def summary(points):\n    return \"You have \" + points + \" points.\"",
+            "hiddenTests": [
+              { "id": "m02-l3-s4-rt1", "code": "assert summary(5) == \"You have 5 points.\"", "message": "use an f-string: f\"You have {points} points.\"" }
+            ],
+            "hints": ["return f\"You have {points} points.\""]
+          }
+        }
+      ]
+    },
+    {
+      "id": "m02-l4",
+      "title": "True, False, and type()",
+      "steps": [
+        {
+          "id": "m02-l4-s1",
+          "kind": "prose",
+          "conceptTags": ["booleans", "type"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Some values are not text or numbers. They are answers to a yes-or-no question, and there are only two of them: True and False. Python calls this kind of value a boolean.\n\nYou rarely type True yourself. You get booleans by ASKING questions with comparisons: 10 > 3 gives True, 3 > 5 gives False. Note the double equals for is this equal: 7 == 7 is True. Single = fills a box; double == asks a question. Mixing those two up is a classic early bug, so it is worth burning in now.\n\nWhen you are not sure what kind of value you are holding, type() will tell you. type(\"hi\") reports it is a str, type(5) reports an int. You will lean on booleans hard next module, when your programs start making decisions."
+        },
+        {
+          "id": "m02-l4-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["booleans"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "A comparison produces a boolean. What prints?",
+          "code": "print(10 > 3)",
+          "expected": "True",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m02-l4",
+            "prompt": "What does print(10 > 3) show?",
+            "expected": "True"
+          }
+        },
+        {
+          "id": "m02-l4-s3",
+          "kind": "mcq",
+          "conceptTags": ["type"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "What KIND of value is \"hello\" (with the quotes)?",
+          "choices": ["str (a string of text)", "int (a whole number)", "float (a decimal)", "bool (True or False)"],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m02-l4",
+            "prompt": "What kind of value does type(\"hello\") report?",
+            "expected": "str, a string of text."
+          }
+        },
+        {
+          "id": "m02-l4-s4",
+          "kind": "fillBlank",
+          "conceptTags": ["booleans"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The two boolean values in Python are True and ___ (mind the capital letter).",
+          "expected": "False",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m02-l4",
+            "prompt": "The two boolean values are True and ___",
+            "expected": "False"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m02-l5",
+      "title": "Build a Small Calculator",
+      "steps": [
+        {
+          "id": "m02-l5-s1",
+          "kind": "prose",
+          "conceptTags": ["operators", "f-strings"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Time to put variables, math, and f-strings to work on something with a real shape. No new ideas here, just combining what you have.\n\nOne handy tool for money math: round(value, 2) trims a number to two decimal places, so round(108.0, 2) stays 108.0 and round(17.519, 2) becomes 17.52. You will want that any time you are dealing with dollars."
+        },
+        {
+          "id": "m02-l5-s2",
+          "kind": "writeStub",
+          "conceptTags": ["operators", "numbers"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Fill in with_tax so it takes a price and a tax percent and returns the price with tax added, rounded to two decimals. Example: with_tax(100, 8) returns 108.0 (8 percent of 100 is 8). The def line is provided; just write the return.",
+          "starterCode": "def with_tax(price, tax_percent):\n    # return price plus tax_percent percent, rounded to 2 decimals\n    pass",
+          "hiddenTests": [
+            { "id": "m02-l5-s2-t1", "code": "assert abs(with_tax(100, 8) - 108.0) < 0.005", "message": "with_tax(100, 8) should be 108.0 (add 8 percent of the price)" },
+            { "id": "m02-l5-s2-t2", "code": "assert abs(with_tax(50, 10) - 55.0) < 0.005", "message": "with_tax(50, 10) should be 55.0" },
+            { "id": "m02-l5-s2-t3", "code": "assert abs(with_tax(20, 0) - 20.0) < 0.005", "message": "check 0 percent tax: with_tax(20, 0) should be 20.0, unchanged" }
+          ],
+          "hints": [
+            "A percent is out of 100, so 8 percent is tax_percent / 100.",
+            "Adding that percent means multiplying by (1 + tax_percent / 100).",
+            "return round(price * (1 + tax_percent / 100), 2)"
+          ],
+          "modelSolution": "def with_tax(price, tax_percent):\n    return round(price * (1 + tax_percent / 100), 2)",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m02-l5",
+            "prompt": "Fill the blank to add a percent: price * (1 ___ tax_percent / 100)",
+            "expected": "+"
+          }
+        },
+        {
+          "id": "m02-l5-s3",
+          "kind": "reflection",
+          "conceptTags": ["variables", "f-strings"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck: in plain words, what is a variable, and why is an f-string nicer than gluing text and numbers together with +? Keep it to a couple of sentences, like you are explaining it to a friend who has never coded."
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m02-boss",
+    "name": "The Tab Splitter",
+    "taunt": "Four friends, one bill, and a tip. Make the numbers come out fair.",
+    "brief": "Dinner is done and the check lands on the table. Write the function that settles it fairly.\n\nFill in split_bill(bill, tip_percent, people) so it returns what EACH person pays: take the bill, add the tip, divide by the number of people, and round to two decimals.\n\nWorked example with real numbers: split_bill(58.40, 20, 4) should return 17.52. Here is why: 20 percent of 58.40 is a tip, giving a total of 70.08, split four ways is 17.52 each.\n\nThe def line is given for you. Write the body. This is everything from this module at once: variables, math with percentages, and round(). No input() needed, we hand the numbers straight in.\n\ndef split_bill(bill, tip_percent, people):",
+    "emblem": "m02-boss.svg",
+    "hiddenTests": [
+      { "id": "m02-boss-t1", "code": "assert abs(split_bill(58.40, 20, 4) - 17.52) < 0.005", "message": "with a 58.40 bill, 20 percent tip, split 4 ways, each person owes 17.52" },
+      { "id": "m02-boss-t2", "code": "assert abs(split_bill(100, 10, 2) - 55.0) < 0.005", "message": "a 100 bill with a 10 percent tip split 2 ways is 55.0 each (110 divided by 2)" },
+      { "id": "m02-boss-t3", "code": "assert abs(split_bill(30, 0, 3) - 10.0) < 0.005", "message": "check a 0 percent tip: a 30 bill split 3 ways is 10.0 each, so the tip math must not add anything" },
+      { "id": "m02-boss-t4", "code": "assert abs(split_bill(45.50, 15, 1) - 52.32) < 0.01", "message": "one diner, 45.50 bill, 15 percent tip should come to 52.32, so it must work for a single person too" }
+    ],
+    "modelSolution": "def split_bill(bill, tip_percent, people):\n    total = bill * (1 + tip_percent / 100)\n    return round(total / people, 2)",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m02-t1", "term": "variable", "definition": "A labeled box that holds a value. You make one with =, as in score = 10, and read it back by name.", "kind": "concept", "strand": "core", "sourceModuleId": "m02", "sourceLessonId": "m02-l1" },
+    { "id": "m02-t2", "term": "float", "definition": "A number with a decimal point, like 5.0 or 17.52. Plain division always gives you a float.", "kind": "concept", "strand": "core", "sourceModuleId": "m02", "sourceLessonId": "m02-l2" },
+    { "id": "m02-t3", "term": "% (modulo)", "definition": "The remainder after division. 17 % 5 is 2. Handy for checking even or odd and for wrapping values around a limit.", "kind": "concept", "strand": "core", "sourceModuleId": "m02", "sourceLessonId": "m02-l2" },
+    { "id": "m02-t4", "term": "f-string", "definition": "A sentence with slots. Put f before the quote and drop values into {curly braces}: f\"You scored {points} points\".", "kind": "concept", "strand": "core", "sourceModuleId": "m02", "sourceLessonId": "m02-l3" },
+    { "id": "m02-t5", "term": "boolean", "definition": "A yes-or-no value, either True or False. You usually get one by asking a question, like 10 > 3.", "kind": "concept", "strand": "core", "sourceModuleId": "m02", "sourceLessonId": "m02-l4" },
+    { "id": "m02-t6", "term": "== vs =", "definition": "One equals sign fills a box (assignment). Two equals signs ask is this equal (a comparison that gives True or False). Mixing them up is a classic early bug.", "kind": "concept", "strand": "core", "sourceModuleId": "m02", "sourceLessonId": "m02-l4" }
+  ]
+}

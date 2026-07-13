@@ -1,0 +1,25 @@
+{
+  "id": "m16",
+  "title": "Objects III: Design a Larger Program",
+  "phase": 2,
+  "strands": ["design", "ship", "tests"],
+  "producesArtifact": true,
+  "conceptTags": ["multi-class", "responsibility", "logic-vs-io"],
+  "lessons": [
+    {
+      "id": "m16-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m16-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["multi-class"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will design a real multi-class application (dividing responsibility across classes, keeping data and behavior together, and a first taste of separating logic from I/O). It ships to your portfolio and becomes a candidate for your Phase 3 carry project. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

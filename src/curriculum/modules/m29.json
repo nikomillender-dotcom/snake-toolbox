@@ -1,0 +1,25 @@
+{
+  "id": "m29",
+  "title": "Making It Fast",
+  "phase": 3,
+  "strands": ["debug", "design", "ship"],
+  "producesArtifact": true,
+  "conceptTags": ["timeit", "cprofile", "profiling", "bottleneck", "premature-optimization"],
+  "lessons": [
+    {
+      "id": "m29-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m29-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["profiling"],
+          "strand": "debug",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will measure before optimizing (timeit and cProfile, both of which run in Pyodide, reading a profile, finding the REAL bottleneck, and when NOT to optimize). You will profile your carry project, fix the true bottleneck rather than the guessed one, and prove the speedup with numbers. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

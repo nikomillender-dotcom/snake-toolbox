@@ -3,7 +3,7 @@
 // every awardMap key matches a real module/boss, lesson and step ids are unique,
 // every COMPLETION_EMITTING_KINDS step in a strand-fed module carries strand.
 // Loud failure with the exact bad id.
-import type { CurriculumBundle } from "../contracts";
+import type { CurriculumBundle, Module } from "../contracts";
 import { COMPLETION_EMITTING_KINDS } from "../contracts";
 
 export interface BundleValidationError {
@@ -12,6 +12,21 @@ export interface BundleValidationError {
 }
 
 const STRAND_FED: ReadonlySet<string> = new Set(["debug", "tests", "read"]);
+
+// Byleth's authoring sentinel (curriculum-bundle round): a not-yet-written module ships as an
+// honest skeleton, a single "prose" step whose body starts with this exact string, no boss, no
+// terms. Machine-detectable so validation can tell "not written yet" apart from "broken."
+const PLACEHOLDER_SENTINEL = "PLACEHOLDER:";
+
+/** Sentinel-aware skeleton detection. A module is a placeholder skeleton if any of its steps is a
+ *  "prose" step whose body begins with the PLACEHOLDER: sentinel. Skeleton modules are EXEMPT from
+ *  authored-content requirements (a boss / graded gate); every other module is "authored" and IS
+ *  held to those requirements. This exemption is scoped to the sentinel only, never widened. */
+export function isPlaceholderModule(mod: Module): boolean {
+  return mod.lessons.some((lesson) =>
+    lesson.steps.some((step) => step.kind === "prose" && typeof step.body === "string" && step.body.startsWith(PLACEHOLDER_SENTINEL)),
+  );
+}
 
 export function validateBundle(bundle: CurriculumBundle): BundleValidationError[] {
   const errors: BundleValidationError[] = [];
@@ -88,6 +103,20 @@ export function validateBundle(bundle: CurriculumBundle): BundleValidationError[
           message: `all-prose lesson (zero emitting steps): terms unlock on module completion, not lesson completion`,
         });
       }
+    }
+  }
+
+  // Sentinel-aware authored-content gate: a module that is NOT a PLACEHOLDER skeleton is real
+  // authored content and must ship its graded gate (a boss); a PLACEHOLDER skeleton is exempt.
+  // This is deliberately NOT a global "every module needs a boss" rule (that would be wrong: a
+  // skeleton has none yet, by honest design) and deliberately NOT removed for every module either
+  // (that would silently hide a genuinely broken authored module). Only the sentinel exempts.
+  for (const mod of bundle.modules) {
+    if (!isPlaceholderModule(mod) && !mod.boss) {
+      errors.push({
+        path: `module/${mod.id}`,
+        message: `authored module "${mod.id}" has no boss (a real module needs its graded gate; only a PLACEHOLDER: skeleton is exempt)`,
+      });
     }
   }
 

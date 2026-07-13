@@ -1,0 +1,25 @@
+{
+  "id": "m22",
+  "title": "The Data Model",
+  "phase": 3,
+  "strands": ["design", "read", "core"],
+  "producesArtifact": true,
+  "conceptTags": ["dunder", "repr", "str", "len", "getitem", "eq", "ordering", "operator-overloading", "dataclasses"],
+  "lessons": [
+    {
+      "id": "m22-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m22-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["dunder"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. This is Pillar 1, a marquee module. Here you will make your own objects behave like real Python using the data model (dunder methods: __repr__, __str__, __len__, __getitem__, __eq__, ordering, operator overloading, and dataclasses). Its boss is build-it-yourself: a dunder-rich class verified by hidden tests. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

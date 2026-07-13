@@ -1,0 +1,25 @@
+{
+  "id": "m32",
+  "title": "The Build-From-Scratch Ladder",
+  "phase": 4,
+  "strands": ["ship", "design", "core"],
+  "producesArtifact": true,
+  "conceptTags": ["data-project", "automation-project", "app-project", "pandas", "matplotlib", "canvas"],
+  "lessons": [
+    {
+      "id": "m32-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m32-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["automation-project"],
+          "strand": "ship",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you build new things from a blank file across three canonical forks so the sandbox never feels like a blank wall: a data project (pandas plus matplotlib, both run in Pyodide), an automation project that saves you real time, and an app project (Python driving the canvas through the JS bridge). Each starts from an empty file and ships to your portfolio with its own README. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

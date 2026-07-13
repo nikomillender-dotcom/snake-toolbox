@@ -1,0 +1,25 @@
+{
+  "id": "m19",
+  "title": "Debugging Deeper",
+  "phase": 2,
+  "strands": ["debug", "read"],
+  "producesArtifact": false,
+  "conceptTags": ["reproduce", "hypothesize", "bisect", "pdb", "logging"],
+  "lessons": [
+    {
+      "id": "m19-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m19-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["bisect"],
+          "strand": "debug",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where the debugging strand formalizes: you will debug systematically instead of by guessing (reproduce, hypothesize, bisect, verify), step through with pdb, and learn logging versus print. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

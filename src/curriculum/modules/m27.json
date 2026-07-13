@@ -1,0 +1,25 @@
+{
+  "id": "m27",
+  "title": "Talking to the World",
+  "phase": 3,
+  "strands": ["core", "read", "errors", "ship"],
+  "producesArtifact": true,
+  "conceptTags": ["http", "api", "json-parsing", "network-errors", "pyfetch", "cors"],
+  "lessons": [
+    {
+      "id": "m27-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m27-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["api"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will pull in live data (HTTP basics, calling an API, parsing JSON, and handling flaky networks), then add a live feed to your carry project. We stay honest about the browser: fetch works via pyfetch, but CORS limits arbitrary scraping, so we use curated endpoints and say so. This is also the fenced, optional home of the real-LLM swap for your agent. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

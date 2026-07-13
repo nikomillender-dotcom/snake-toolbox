@@ -1,0 +1,25 @@
+{
+  "id": "m11",
+  "title": "Modules and the Standard Library",
+  "phase": 2,
+  "strands": ["stdlib", "core", "read"],
+  "producesArtifact": false,
+  "conceptTags": ["import", "from-import", "module", "math", "random", "datetime", "pathlib", "collections", "micropip"],
+  "lessons": [
+    {
+      "id": "m11-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m11-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["import"],
+          "strand": "stdlib",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will stop reinventing wheels and start your standard-library survival kit (import, writing your own module, a guided tour of math, random, datetime, pathlib and collections, and installing packages in-app with micropip). The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

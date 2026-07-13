@@ -1,0 +1,25 @@
+{
+  "id": "m23",
+  "title": "Iteration and Generators",
+  "phase": 3,
+  "strands": ["core", "read", "design"],
+  "producesArtifact": true,
+  "conceptTags": ["iterator-protocol", "generators", "yield", "generator-expression", "pipeline", "itertools"],
+  "lessons": [
+    {
+      "id": "m23-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m23-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["generators"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. This is Pillar 3, a marquee module. Here you will handle large or infinite data streams lazily (the iterator protocol, generators and yield, generator expressions, pipelines, and itertools). A quick note to keep two ideas apart: these yield-based generators are the language feature, not the same thing as the automation scripts you want to build. Its boss is build-it-yourself: your own iterable plus a generator pipeline. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

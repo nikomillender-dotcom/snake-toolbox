@@ -1,0 +1,25 @@
+{
+  "id": "m18",
+  "title": "Modern Python Style",
+  "phase": 2,
+  "strands": ["design", "read", "core"],
+  "producesArtifact": false,
+  "conceptTags": ["pep8", "docstrings", "type-hints", "type-checker", "idiomatic-refactoring"],
+  "lessons": [
+    {
+      "id": "m18-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m18-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["type-hints"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will learn to write code a Python team would want to maintain (PEP 8, docstrings, type hints, running a type checker, and idiomatic before-and-after refactoring). Type hints are taught as normal 2026 practice, not something exotic. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

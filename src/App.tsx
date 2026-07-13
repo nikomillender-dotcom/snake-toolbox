@@ -26,7 +26,7 @@ import type {
 } from "./contracts";
 import { COMPLETION_EMITTING_KINDS } from "./contracts";
 import { createWorkerClient, type WorkerClient } from "./workerClient";
-import { FIXTURE_BUNDLE } from "./mocks/curriculumFixture";
+import { REAL_CURRICULUM_BUNDLE } from "./curriculum/realCurriculumBundle";
 import { deriveStatSheet } from "./engine/derive/deriveStatSheet";
 import { detectPromotion } from "./engine/derive/detectPromotion";
 import { deriveGlossary } from "./engine/derive/deriveGlossary";
@@ -120,7 +120,7 @@ export function App({ store }: AppProps) {
   const installed = detectInstalled();
 
   const worker: WorkerClient = useMemo(() => createWorkerClient(), []);
-  const bundle: CurriculumBundle = useMemo(() => FIXTURE_BUNDLE, []);
+  const bundle: CurriculumBundle = useMemo(() => REAL_CURRICULUM_BUNDLE, []);
   const lessonIndex = useMemo(() => buildLessonIndex(bundle), [bundle]);
   const vault = useMemo(() => {
     try { return createSecretsVault(); }

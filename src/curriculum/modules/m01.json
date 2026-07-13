@@ -1,0 +1,331 @@
+{
+  "id": "m01",
+  "title": "Hello, Python",
+  "phase": 1,
+  "strands": ["core", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["print", "input", "comments", "strings", "numbers", "console"],
+  "lessons": [
+    {
+      "id": "m01-l1",
+      "title": "Your First Line",
+      "steps": [
+        {
+          "id": "m01-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["console", "print"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome in. You do not need to know anything yet, and that is exactly the right place to start.\n\nHere is the whole trick to programming: you write a line, you hit Run, and the computer does what the line says. That is it. Everything else in this whole course is just more interesting lines.\n\nThink of the console (the dark panel next to your code) as a little stage. When you tell Python to say something, the words show up on that stage. Your job right now is simply to make it say one thing. Hit Run on the next example and watch the stage."
+        },
+        {
+          "id": "m01-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["print"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Hit Run. Watch the console show your words.",
+          "code": "print(\"Hello, world.\")"
+        },
+        {
+          "id": "m01-l1-s3",
+          "kind": "prose",
+          "conceptTags": ["print"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "That word print is a command. You hand it something inside the parentheses, and it prints that thing onto the console stage.\n\nThe quotes matter. \"Hello, world.\" with quotes is text you want shown exactly as written. We call text like that a string (it is just a string of characters). We will meet the version without quotes soon, and it means something different.\n\nOne command, one job. Let us make sure you can predict what it does before you write your own."
+        },
+        {
+          "id": "m01-l1-s4",
+          "kind": "predictOutput",
+          "conceptTags": ["print"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Read this line. What will the console show when you Run it?",
+          "code": "print(\"Snake ToolBox is booting up\")",
+          "expected": "Snake ToolBox is booting up",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m01-l1",
+            "prompt": "What does this print?",
+            "code": "print(\"Snake ToolBox is booting up\")",
+            "expected": "Snake ToolBox is booting up"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m01-l2",
+      "title": "print, and Leaving Notes",
+      "steps": [
+        {
+          "id": "m01-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["print", "comments"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "You can print more than once. Each print starts a fresh line on the stage, top to bottom, in the order you wrote them. Simple and predictable.\n\nThere is also a way to leave yourself a note that Python completely ignores: a comment. Put a # at the start, and everything after it on that line is just for humans. Python skips it.\n\nWhy leave notes in code the computer ignores? Same reason you write a sticky note on the fridge: future you will thank present you. Comments are how you explain WHY a line is there, so when you come back in three weeks you are not staring at a puzzle."
+        },
+        {
+          "id": "m01-l2-s2",
+          "kind": "liveExample",
+          "conceptTags": ["print", "comments"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Notice the # line does nothing on screen.",
+          "code": "# This line is a note. Python ignores it.\nprint(\"Line one\")\nprint(\"Line two\")"
+        },
+        {
+          "id": "m01-l2-s3",
+          "kind": "parsons",
+          "conceptTags": ["print"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Drag these lines into the right order so the console shows the greeting, then the name, then the sign-off (three separate lines, top to bottom).",
+          "scrambled": ["print(\"Later, gator.\")", "print(\"Hello there.\")", "print(\"My name is Niko.\")"],
+          "solutionOrder": [1, 2, 0],
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m01-l2",
+            "prompt": "True or false: three print lines show up on the console in the exact order you wrote them, top to bottom.",
+            "expected": "True. Python runs your lines top to bottom, one at a time."
+          }
+        },
+        {
+          "id": "m01-l2-s4",
+          "kind": "fillBlank",
+          "conceptTags": ["comments"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Fill in the single character that starts a comment (a note Python ignores).",
+          "expected": "#",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m01-l2",
+            "prompt": "Which single character starts a comment in Python?",
+            "expected": "#"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m01-l3",
+      "title": "Words vs Numbers",
+      "steps": [
+        {
+          "id": "m01-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["strings", "numbers"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Python cares about the difference between text and numbers, and getting them mixed up is the number one beginner trip-up. So let us head it off now.\n\nText goes in quotes: \"42\" is a string, a little label. A number has no quotes: 42 is an amount you can do math with.\n\nHere is the tell. You can add two numbers and get a bigger number: 40 + 2 gives 42. But if you add two strings, Python just glues them together end to end: \"40\" + \"2\" gives \"402\". Same plus sign, totally different behavior, all because of those quotes. Quotes mean text; no quotes means number."
+        },
+        {
+          "id": "m01-l3-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["numbers"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "These are numbers (no quotes), so the plus sign does math. What prints?",
+          "code": "print(40 + 2)",
+          "expected": "42",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m01-l3",
+            "prompt": "What does this print?",
+            "code": "print(40 + 2)",
+            "expected": "42"
+          }
+        },
+        {
+          "id": "m01-l3-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["strings"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "These are strings (they have quotes), so the plus sign glues them together. What prints?",
+          "code": "print(\"40\" + \"2\")",
+          "expected": "402",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m01-l3",
+            "prompt": "What does this print?",
+            "code": "print(\"40\" + \"2\")",
+            "expected": "402"
+          }
+        },
+        {
+          "id": "m01-l3-s4",
+          "kind": "mcq",
+          "conceptTags": ["strings", "numbers"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Which of these is a number Python can do math with, not text?",
+          "choices": ["\"7\"", "7", "\"seven\"", "seven"],
+          "answerIndex": 1,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m01-l3",
+            "prompt": "Which is a real number, not text: \"7\" or 7 ?",
+            "expected": "7 (no quotes). \"7\" with quotes is a string."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m01-l4",
+      "title": "input: Your Program Talks Back",
+      "steps": [
+        {
+          "id": "m01-l4-s1",
+          "kind": "prose",
+          "conceptTags": ["input", "strings"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "So far your programs only talk. Now let us make one listen.\n\nThe command input() pauses your program and waits for the person to type something and press enter. Whatever they type comes back to you. It is like your program asking a question at the door and holding still until it gets an answer.\n\nOne catch, and it is the big one: input() always hands you back a string, even if the person typed digits. Type 7 at an input prompt and you get \"7\", the text, not 7 the number. So if you want to do math with it, you have to convert it first. That is the whole reason the next idea exists."
+        },
+        {
+          "id": "m01-l4-s2",
+          "kind": "prose",
+          "conceptTags": ["numbers", "input"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "To turn a string of digits into a real number, wrap it in int(). The name is short for integer, which just means a whole number.\n\nint(\"7\") gives you 7, the actual number, ready for math. Going the other way, str(42) turns the number 42 back into the text \"42\", which you need when you want to glue a number onto a sentence with +.\n\nKeep this pair in your pocket: int() to do math with typed input, str() to paste a number into text. You will use both in the boss at the end of this module."
+        },
+        {
+          "id": "m01-l4-s3",
+          "kind": "liveExample",
+          "conceptTags": ["input", "numbers"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this and type a number when it asks. See how int() lets us double it.",
+          "code": "typed = input(\"Give me a number: \")\nnumber = int(typed)\nprint(\"Doubled, that is \" + str(number * 2))"
+        },
+        {
+          "id": "m01-l4-s4",
+          "kind": "predictOutput",
+          "conceptTags": ["input", "strings"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Suppose the person types 5 at the prompt. Remember: input() gives back a STRING, and + glues strings together. What prints?",
+          "code": "answer = input(\"Pick a digit: \")\nprint(answer + answer)",
+          "expected": "55",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m01-l4",
+            "prompt": "The person types 5. input() returns a string. What does print(answer + answer) show?",
+            "expected": "55"
+          }
+        },
+        {
+          "id": "m01-l4-s5",
+          "kind": "fixBug",
+          "conceptTags": ["numbers", "input"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This program wants to add 10 to whatever number the person types. But input() hands back a string, and gluing \"10\" onto text is not adding. Fix it so it does real math. The function total() should return the typed value plus 10.",
+          "starterCode": "def total(typed):\n    # typed is what the person entered, like \"5\"\n    return typed + 10",
+          "hiddenTests": [
+            { "id": "m01-l4-s5-t1", "code": "assert total(\"5\") == 15", "message": "when the person types 5, the result should be the number 15, not glued-together text" },
+            { "id": "m01-l4-s5-t2", "code": "assert total(\"0\") == 10", "message": "check what happens when the person types 0: 0 plus 10 should be 10" },
+            { "id": "m01-l4-s5-t3", "code": "assert isinstance(total(\"7\"), int)", "message": "the result should be a real number (an int), so convert the typed string with int() before adding" }
+          ],
+          "hints": [
+            "input() always returns a string, so \"5\" here is text, not a number.",
+            "Wrap the typed value in int() to turn \"5\" into 5 before you add.",
+            "The fix is: return int(typed) + 10"
+          ],
+          "modelSolution": "def total(typed):\n    return int(typed) + 10",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m01-l4",
+            "prompt": "Make this add real numbers. The typed value is a string, so convert it first.",
+            "starterCode": "def total(typed):\n    return typed + 10",
+            "hiddenTests": [
+              { "id": "m01-l4-s5-rt1", "code": "assert total(\"5\") == 15", "message": "convert the typed string with int() before adding" }
+            ],
+            "hints": ["Wrap typed in int() before the + 10."]
+          }
+        }
+      ]
+    },
+    {
+      "id": "m01-l5",
+      "title": "Bring It Together",
+      "steps": [
+        {
+          "id": "m01-l5-s1",
+          "kind": "prose",
+          "conceptTags": ["print", "input", "strings"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "You now have every piece you need for a tiny program that actually does something: print to speak, input to listen, and int()/str() to move between text and numbers.\n\nLet us stitch them into one small useful thing before the boss. No new ideas here, just you, combining what you already have. That combining move is the real skill, and it is exactly what the boss will ask for."
+        },
+        {
+          "id": "m01-l5-s2",
+          "kind": "writeStub",
+          "conceptTags": ["strings", "print"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Write the body of make_label. It takes a name and returns a greeting string in exactly this shape: Hey NAME, you are on the board. For example make_label(\"Niko\") returns \"Hey Niko, you are on the board.\"",
+          "starterCode": "def make_label(name):\n    # return the greeting string described above\n    pass",
+          "hiddenTests": [
+            { "id": "m01-l5-s2-t1", "code": "assert make_label(\"Niko\") == \"Hey Niko, you are on the board.\"", "message": "check the exact wording and punctuation, including the period at the end" },
+            { "id": "m01-l5-s2-t2", "code": "assert make_label(\"Sam\") == \"Hey Sam, you are on the board.\"", "message": "the name should be dropped in, not hard-coded, so a different name should work too" }
+          ],
+          "hints": [
+            "Glue the pieces with +, like \"Hey \" + name + \", ...\"",
+            "Do not forget the space after Hey and the comma after the name.",
+            "return \"Hey \" + name + \", you are on the board.\""
+          ],
+          "modelSolution": "def make_label(name):\n    return \"Hey \" + name + \", you are on the board.\"",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m01-l5",
+            "prompt": "Fill the blank to build the greeting: return \"Hey \" ___ name ___ \", you are on the board.\" (same character both times)",
+            "expected": "+"
+          }
+        },
+        {
+          "id": "m01-l5-s3",
+          "kind": "reflection",
+          "conceptTags": ["print", "input"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck: in one or two plain sentences, explain the difference between print() and input(), and why typing 7 at an input prompt does not give you a number you can do math with. No jargon, like you are telling a friend."
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m01-boss",
+    "name": "The Blank Console",
+    "taunt": "You can make me speak. But can you make me listen?",
+    "brief": "This is your first real program, and it TALKS BACK. Write one that asks the person for their name and a number, then answers them.\n\nBecause your program needs to listen for an answer, we wrap it in a labeled box so Snake ToolBox can press play on it for you. Start with this exact line, then indent your program under it:\n\ndef run():\n\nInside run(), do four things:\n1. Ask for a name with input() and keep it.\n2. Ask for a number with input() and keep it.\n3. print a friendly greeting that includes their name.\n4. print a line showing their number doubled (remember: input gives you text, so use int() to do the math and str() to put the result back into a sentence).\n\nOne rule: do NOT add a line at the very bottom that calls run(). Snake ToolBox presses play for you when you hit Check. (You will learn exactly how these def boxes work in Module 6. For now, just start every line of your program indented under def run():.)",
+    "emblem": "m01-boss.svg",
+    "hiddenTests": [
+      { "id": "m01-boss-t1", "code": "import builtins, io, contextlib\n_answers = iter([\"Niko\", \"7\"])\n_orig = builtins.input\nbuiltins.input = lambda *a, **k: next(_answers)\n_buf = io.StringIO()\ntry:\n    with contextlib.redirect_stdout(_buf):\n        run()\nfinally:\n    builtins.input = _orig\n_out = _buf.getvalue()\nassert \"Niko\" in _out", "message": "your greeting should include the name the person typed in (they typed Niko, so Niko should appear in what prints)" },
+      { "id": "m01-boss-t2", "code": "import builtins, io, contextlib\n_answers = iter([\"Niko\", \"7\"])\n_orig = builtins.input\nbuiltins.input = lambda *a, **k: next(_answers)\n_buf = io.StringIO()\ntry:\n    with contextlib.redirect_stdout(_buf):\n        run()\nfinally:\n    builtins.input = _orig\n_out = _buf.getvalue()\nassert \"14\" in _out", "message": "when the number is 7, the doubled line should show 14 (use int() to double it, then str() to print it)" },
+      { "id": "m01-boss-t3", "code": "import builtins, io, contextlib\n_answers = iter([\"Sam\", \"10\"])\n_orig = builtins.input\nbuiltins.input = lambda *a, **k: next(_answers)\n_buf = io.StringIO()\ntry:\n    with contextlib.redirect_stdout(_buf):\n        run()\nfinally:\n    builtins.input = _orig\n_out = _buf.getvalue()\nassert \"Sam\" in _out and \"20\" in _out", "message": "try it with a different person: name Sam and number 10 should give a greeting with Sam and a doubled line showing 20, so nothing can be hard-coded" }
+    ],
+    "modelSolution": "def run():\n    name = input(\"What is your name? \")\n    number = input(\"Pick a number: \")\n    print(\"Hey \" + name + \", welcome to Snake ToolBox.\")\n    print(\"Your number doubled is \" + str(int(number) * 2))",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m01-t1", "term": "print()", "definition": "The command that shows something on the console. print(\"hi\") puts the word hi on screen.", "kind": "function", "strand": "core", "sourceModuleId": "m01", "sourceLessonId": "m01-l1" },
+    { "id": "m01-t2", "term": "console", "definition": "The little screen where your program's output shows up. Your program's stage.", "kind": "concept", "strand": "core", "sourceModuleId": "m01", "sourceLessonId": "m01-l1" },
+    { "id": "m01-t3", "term": "comment", "definition": "A note to yourself in the code that Python ignores. Everything after a # on a line is a comment.", "kind": "concept", "strand": "core", "sourceModuleId": "m01", "sourceLessonId": "m01-l2" },
+    { "id": "m01-t4", "term": "string", "definition": "Text, wrapped in quotes. \"hello\" and \"42\" are both strings (yes, even the one that looks like a number).", "kind": "concept", "strand": "core", "sourceModuleId": "m01", "sourceLessonId": "m01-l3" },
+    { "id": "m01-t5", "term": "input()", "definition": "The command that pauses your program and waits for the person to type something. Whatever they type comes back as a string.", "kind": "function", "strand": "core", "sourceModuleId": "m01", "sourceLessonId": "m01-l4" },
+    { "id": "m01-t6", "term": "int()", "definition": "Turns a string of digits into a real number you can do math with. int(\"7\") becomes 7.", "kind": "function", "strand": "core", "sourceModuleId": "m01", "sourceLessonId": "m01-l4" }
+  ]
+}

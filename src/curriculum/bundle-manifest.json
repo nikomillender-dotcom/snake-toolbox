@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "phases": [
+    { "id": 1, "name": "First Light", "moduleIds": ["m01", "m02", "m03", "m04", "m05", "m06", "m07", "m08", "m09", "m10"], "milestone": "PCEP marker: you now cover everything the PCEP entry cert tests, plus traceback literacy it leaves out." },
+    { "id": 2, "name": "Building", "moduleIds": ["m11", "m12", "m13", "m14", "m15", "m16", "m17", "m18", "m19", "m20"], "milestone": "PCAP marker: you now cover PCAP territory, plus type hints and real testing it leaves out." },
+    { "id": 3, "name": "The Forge", "moduleIds": ["m21", "m22", "m23", "m24", "m25", "m26", "m27", "m28", "m29", "m30"], "milestone": "Carry project v1.0: a real, tested, persistent tool, shipped to your portfolio repo." },
+    { "id": 4, "name": "Solo Flight", "moduleIds": ["m31", "m32", "m33"], "milestone": "Sandbox graduation: the handoff. The solo-builder loop is installed and your portfolio is already full." }
+  ],
+  "units": [
+    { "id": "u1", "title": "First Programs", "phase": 1, "moduleIds": ["m01", "m02", "m03"], "emblem": "u1-first-programs.svg" },
+    { "id": "u2", "title": "Logic and Loops", "phase": 1, "moduleIds": ["m04", "m05", "m06"], "emblem": "u2-logic-loops.svg" },
+    { "id": "u3", "title": "Working With Data", "phase": 1, "moduleIds": ["m07", "m08", "m09", "m10"], "emblem": "u3-working-with-data.svg" },
+    { "id": "u4", "title": "The Toolkit", "phase": 2, "moduleIds": ["m11", "m12", "m13"], "emblem": "u4-toolkit.svg" },
+    { "id": "u5", "title": "Objects", "phase": 2, "moduleIds": ["m14", "m15", "m16"], "emblem": "u5-objects.svg" },
+    { "id": "u6", "title": "Professional Polish", "phase": 2, "moduleIds": ["m17", "m18", "m19", "m20"], "emblem": "u6-professional-polish.svg" },
+    { "id": "u7", "title": "The Four Pillars", "phase": 3, "moduleIds": ["m21", "m22", "m23", "m24", "m25"], "emblem": "u7-four-pillars.svg" },
+    { "id": "u8", "title": "Real-World Craft", "phase": 3, "moduleIds": ["m26", "m27", "m28", "m29", "m30"], "emblem": "u8-real-world-craft.svg" },
+    { "id": "u9", "title": "The Handoff", "phase": 4, "moduleIds": ["m31", "m32", "m33"], "emblem": "u9-handoff.svg" }
+  ],
+  "moduleIndex": ["m01", "m02", "m03", "m04", "m05", "m06", "m07", "m08", "m09", "m10", "m11", "m12", "m13", "m14", "m15", "m16", "m17", "m18", "m19", "m20", "m21", "m22", "m23", "m24", "m25", "m26", "m27", "m28", "m29", "m30", "m31", "m32", "m33"]
+}

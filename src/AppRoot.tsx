@@ -4,7 +4,7 @@ import { useEffect, useState } from "preact/hooks";
 import { App } from "./App";
 import { IndexedDbStore } from "./engine/store/indexedDbStore";
 import { validateBundle, assertAllModulesCompletable } from "./engine/bundleValidator";
-import { FIXTURE_BUNDLE } from "./mocks/curriculumFixture";
+import { REAL_CURRICULUM_BUNDLE } from "./curriculum/realCurriculumBundle";
 import type { Store } from "./contracts";
 
 export function AppRoot() {
@@ -13,12 +13,12 @@ export function AppRoot() {
 
   useEffect(() => {
     // Validate the bundle at load time (hardening F)
-    const validationErrors = validateBundle(FIXTURE_BUNDLE)
+    const validationErrors = validateBundle(REAL_CURRICULUM_BUNDLE)
       .filter(e => !e.message.startsWith("all-prose lesson")); // INFO only
     if (validationErrors.length > 0) {
       console.error("Bundle validation errors:", validationErrors);
     }
-    const completenessErrors = assertAllModulesCompletable(FIXTURE_BUNDLE);
+    const completenessErrors = assertAllModulesCompletable(REAL_CURRICULUM_BUNDLE);
     if (completenessErrors.length > 0) {
       console.error("Bundle completeness errors:", completenessErrors);
     }

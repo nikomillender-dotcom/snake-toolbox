@@ -1,0 +1,25 @@
+{
+  "id": "m12",
+  "title": "Errors as Design",
+  "phase": 2,
+  "strands": ["errors", "debug", "core"],
+  "producesArtifact": false,
+  "conceptTags": ["try", "except", "else", "finally", "raise", "custom-exceptions", "eafp", "lbyl"],
+  "lessons": [
+    {
+      "id": "m12-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m12-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["try"],
+          "strand": "errors",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will turn errors from crashes into controlled behavior (try, except, else, finally, raising, custom exceptions, and the EAFP-versus-LBYL idiom). Back in Module 3 you learned to READ errors; here you learn to DESIGN with them. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

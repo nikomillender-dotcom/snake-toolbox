@@ -1,0 +1,25 @@
+{
+  "id": "m20",
+  "title": "Testing You Can Trust",
+  "phase": 2,
+  "strands": ["tests", "ship", "debug"],
+  "producesArtifact": true,
+  "conceptTags": ["assert", "pytest", "fixtures", "parametrize", "failing-test"],
+  "lessons": [
+    {
+      "id": "m20-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m20-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["pytest"],
+          "strand": "tests",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where the testing strand formalizes: you will write tests that let you change code without fear (from assert to pytest, what to test and what not to, fixtures and parametrize, reading a failing test). TDD is shown as one workflow among several, never as doctrine. It ends with the PCAP boss and marker. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

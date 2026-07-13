@@ -1,0 +1,365 @@
+{
+  "id": "m06",
+  "title": "Functions I",
+  "phase": 1,
+  "strands": ["core", "design", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["def", "parameters", "return", "scope", "decomposition", "default-values", "none"],
+  "lessons": [
+    {
+      "id": "m06-l1",
+      "title": "Why Functions",
+      "steps": [
+        {
+          "id": "m06-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["def", "decomposition"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome back. This is the big one. If Modules 1 to 5 were learning the notes, functions are where you start playing actual music. Almost every program you admire is mostly functions.\n\nHere is the problem they solve. Say you write five lines to calculate a tip. Later you need that same calculation in three more places. Copy and paste it three times? Now a fix means editing four copies, and you WILL miss one. A function lets you write those lines ONCE, give them a name, and call them by name wherever you need them.\n\nYou have actually been using this shape the whole time: every def box you filled in was a function. Now you build them yourself. A function has two separate moments: DEFINING it (writing the recipe, which runs nothing yet) and CALLING it (actually cooking, by writing its name with parentheses). Define now, call later, as many times as you like."
+        },
+        {
+          "id": "m06-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["def"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. The def block defines the recipe. Nothing prints until you CALL greet(), which we do twice.",
+          "code": "def greet():\n    print(\"Hello there!\")\n    print(\"Welcome back.\")\n\ngreet()\ngreet()"
+        },
+        {
+          "id": "m06-l1-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["def"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Defining a function does NOT run it. Only the call does. Read carefully: what prints, and in what order?",
+          "code": "def cheer():\n    print(\"Go!\")\n\nprint(\"Ready\")\ncheer()",
+          "expected": "Ready\nGo!",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m06-l1",
+            "prompt": "The def is written before the print, but which runs first?",
+            "code": "def cheer():\n    print(\"Go!\")\n\nprint(\"Ready\")\ncheer()",
+            "expected": "Ready\nGo!"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m06-l2",
+      "title": "Parameters and Arguments",
+      "steps": [
+        {
+          "id": "m06-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["parameters"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "A function gets far more useful when you can hand it different inputs each time. Those inputs have two names depending on where you stand.\n\nIn the def line, they are parameters: the placeholder names, like the n in def double(n). When you CALL the function, the actual values you pass are arguments: the 5 in double(5). Inside the function, the parameter n simply IS whatever you passed, so n is 5 for that call.\n\nYou can take several, separated by commas: def add(a, b). Order matters. The first value you pass lands in the first parameter, the second in the second. Line them up carefully."
+        },
+        {
+          "id": "m06-l2-s2",
+          "kind": "liveExample",
+          "conceptTags": ["parameters"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Same function, different arguments, different results.",
+          "code": "def greet(name):\n    print(f\"Hello, {name}!\")\n\ngreet(\"Niko\")\ngreet(\"Sam\")"
+        },
+        {
+          "id": "m06-l2-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["parameters"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The argument is worked out FIRST, then passed in. So what value does n hold, and what prints?",
+          "code": "def triple(n):\n    print(n * 3)\n\ntriple(2 + 1)",
+          "expected": "9",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m06-l2",
+            "prompt": "triple(2 + 1): what prints?",
+            "code": "def triple(n):\n    print(n * 3)\n\ntriple(2 + 1)",
+            "expected": "9"
+          }
+        },
+        {
+          "id": "m06-l2-s4",
+          "kind": "parsons",
+          "conceptTags": ["def", "parameters"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Drag these into order to define a square function and then call it. The print line belongs INSIDE the function (watch the indent), and the call comes after the whole definition.",
+          "scrambled": ["def square(n):", "square(4)", "    print(n * n)"],
+          "solutionOrder": [0, 2, 1],
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m06-l2",
+            "prompt": "When you define a function then call it, which comes first in the file: the def block or the call?",
+            "expected": "The whole def block comes first (the recipe), then the call that runs it."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m06-l3",
+      "title": "return vs print",
+      "steps": [
+        {
+          "id": "m06-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["return"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Here is the single most important and most misunderstood idea about functions: return.\n\nprint shows something on the screen for a human to read. return hands a value BACK to whoever called the function, so the rest of the program can use it. They look similar and do completely different jobs.\n\nWhen a function returns a value, you can catch it in a variable, do math with it, or pass it into another function. When a function only prints, the value is gone the instant it flashes on screen; you cannot do anything else with it. Rule of thumb: if another part of your program needs the answer, RETURN it. If a human just needs to see it, print it. Most useful functions return.\n\nOne more thing to bank: the moment a return runs, the function stops right there and hands back that value. Any lines after it never run."
+        },
+        {
+          "id": "m06-l3-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["return"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "add RETURNS its answer, so we can catch it in result and keep working with it. What prints?",
+          "code": "def add(a, b):\n    return a + b\n\nresult = add(3, 4)\nprint(result + 1)",
+          "expected": "8",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m06-l3",
+            "prompt": "result = add(3, 4), then print(result + 1). What prints?",
+            "code": "def add(a, b):\n    return a + b\n\nresult = add(3, 4)\nprint(result + 1)",
+            "expected": "8"
+          }
+        },
+        {
+          "id": "m06-l3-s3",
+          "kind": "fixBug",
+          "conceptTags": ["return"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This looks fine, and it even shows the right number on screen. But it PRINTS the area instead of RETURNING it, so the caller cannot use the result (the check calls area(3, 4) and expects to get 12 back). Change it to hand the value back.",
+          "starterCode": "def area(width, height):\n    print(width * height)",
+          "hiddenTests": [
+            { "id": "m06-l3-s3-t1", "code": "assert area(3, 4) == 12", "message": "area(3, 4) should hand back 12 so the caller can use it, which means return, not print" },
+            { "id": "m06-l3-s3-t2", "code": "assert area(5, 5) == 25", "message": "area(5, 5) should return 25" }
+          ],
+          "hints": [
+            "print shows a value; it does not give it back. A function that only prints hands back None.",
+            "The caller wants the number, so use return instead of print.",
+            "return width * height"
+          ],
+          "modelSolution": "def area(width, height):\n    return width * height",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m06-l3",
+            "prompt": "This prints the answer but the caller gets nothing usable. Fix it.",
+            "starterCode": "def area(width, height):\n    print(width * height)",
+            "hiddenTests": [
+              { "id": "m06-l3-s3-rt1", "code": "assert area(3, 4) == 12", "message": "use return, not print, so the value comes back" }
+            ],
+            "hints": ["return width * height"]
+          }
+        },
+        {
+          "id": "m06-l3-s4",
+          "kind": "mcq",
+          "conceptTags": ["return", "none"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "A function does its work with print() and has no return statement. You write  x = the_function()  to catch its result. What is x?",
+          "choices": ["None (the function handed nothing back)", "The value that was printed", "A crash: you cannot store a function's result", "0"],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m06-l3",
+            "prompt": "A function only prints, never returns. What do you get if you store its result in a variable?",
+            "expected": "None. With no return, the function hands back None."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m06-l4",
+      "title": "Default Values and None",
+      "steps": [
+        {
+          "id": "m06-l4-s1",
+          "kind": "prose",
+          "conceptTags": ["default-values", "none"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Two small, handy pieces.\n\nA default value gives a parameter a fallback. In def greet(name, greeting=\"Hello\"):, if the caller leaves out the greeting, it uses \"Hello\" automatically. So greet(\"Niko\") works, and greet(\"Niko\", \"Hey\") overrides the default. One rule: parameters with defaults have to come after the ones without.\n\nNone is Python's word for nothing, on purpose. A function with no return hands back None automatically (you saw that last lesson). You also use None deliberately to mean no value yet. It is not 0 and not an empty string. It is the absence of a value, a clean way to say there is nothing here."
+        },
+        {
+          "id": "m06-l4-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["default-values"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The first call leans on the default greeting; the second overrides it. What prints (one line per call)?",
+          "code": "def greet(name, greeting=\"Hello\"):\n    print(f\"{greeting}, {name}!\")\n\ngreet(\"Niko\")\ngreet(\"Sam\", \"Hey\")",
+          "expected": "Hello, Niko!\nHey, Sam!",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m06-l4",
+            "prompt": "One call uses the default greeting, the other overrides it. What prints?",
+            "code": "def greet(name, greeting=\"Hello\"):\n    print(f\"{greeting}, {name}!\")\n\ngreet(\"Niko\")\ngreet(\"Sam\", \"Hey\")",
+            "expected": "Hello, Niko!\nHey, Sam!"
+          }
+        },
+        {
+          "id": "m06-l4-s3",
+          "kind": "fillBlank",
+          "conceptTags": ["none"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "A function that never runs a return statement hands back the special value ___ (Python's word for nothing, with a capital letter).",
+          "expected": "None",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m06-l4",
+            "prompt": "A function with no return hands back ___",
+            "expected": "None"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m06-l5",
+      "title": "Scope: Each Function Gets Its Own Workspace",
+      "steps": [
+        {
+          "id": "m06-l5-s1",
+          "kind": "prose",
+          "conceptTags": ["scope"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Where do a function's variables live? Inside the function, and only inside. A variable created in a function is LOCAL: it exists while the function runs and vanishes the moment it returns. Code outside cannot see it. This is called scope.\n\nAnd it is a feature, not a nuisance. It means you can name a variable total inside one function without worrying about some other total elsewhere stepping on it. Each function gets its own clean, private workspace. Parameters are local too.\n\nSo how does anything get OUT of a function? You return it. That is the one door. Trying to read a variable that lives inside another function is a classic NameError, and now you know exactly why: it was never visible out here."
+        },
+        {
+          "id": "m06-l5-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["scope", "return"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "tax is local: it is built inside the function and used there. The RESULT leaves through return. What prints?",
+          "code": "def add_tax(price):\n    tax = price * 0.1\n    return price + tax\n\nprint(add_tax(100))",
+          "expected": "110.0",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m06-l5",
+            "prompt": "add_tax(100) with a 10 percent tax. What prints?",
+            "code": "def add_tax(price):\n    tax = price * 0.1\n    return price + tax\n\nprint(add_tax(100))",
+            "expected": "110.0"
+          }
+        },
+        {
+          "id": "m06-l5-s3",
+          "kind": "mcq",
+          "conceptTags": ["scope"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Inside a function you create a variable named tax. Then, in code OUTSIDE the function, you write print(tax). What happens?",
+          "choices": [
+            "A NameError: tax only exists inside the function, so out here Python has never heard of it.",
+            "It prints the tax value fine.",
+            "It prints None.",
+            "It prints 0."
+          ],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m06-l5",
+            "prompt": "You try to print a variable that was created inside a function, from outside it. What happens?",
+            "expected": "A NameError. Local variables are invisible outside their function. To get a value out, return it."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m06-l6",
+      "title": "Decompose: Small Pieces That Fit Together",
+      "steps": [
+        {
+          "id": "m06-l6-s1",
+          "kind": "prose",
+          "conceptTags": ["decomposition"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "The real superpower of functions is decomposition: taking one big, messy job and breaking it into small, named pieces that each do exactly one thing. A good function name is like a good label. Read the names and you understand the program without reading every line inside.\n\nThe magic is that functions can CALL other functions. A small helper does one calculation; a bigger function calls that helper and adds the next step; a top-level function calls that one. Small pieces, stacked. This is how large programs stay understandable, and it is the exact move your boss will ask for."
+        },
+        {
+          "id": "m06-l6-s2",
+          "kind": "writeStub",
+          "conceptTags": ["decomposition", "return"],
+          "strand": "design",
+          "statTags": ["SYNTAX"],
+          "prompt": "The helper price_with_tax is written for you. Write cart_total(item1, item2) so it returns the tax-included price of BOTH items added together. Do it the clean way: call price_with_tax on each item and add the results. That is decomposition, reusing a small piece instead of redoing its math.",
+          "starterCode": "def price_with_tax(price):\n    return round(price * 1.08, 2)\n\ndef cart_total(item1, item2):\n    # return the tax-included total of both items\n    # reuse price_with_tax for each one\n    pass",
+          "hiddenTests": [
+            { "id": "m06-l6-s2-t1", "code": "assert abs(cart_total(10, 20) - 32.4) < 0.005", "message": "10 with tax is 10.8, 20 with tax is 21.6, so the total is 32.4" },
+            { "id": "m06-l6-s2-t2", "code": "assert abs(cart_total(0, 0) - 0.0) < 0.005", "message": "two free items should total 0.0" },
+            { "id": "m06-l6-s2-t3", "code": "assert abs(cart_total(100, 0) - 108.0) < 0.005", "message": "100 with tax is 108.0, plus a free item, so 108.0" }
+          ],
+          "hints": [
+            "You do not need to write the tax math again. price_with_tax already does it.",
+            "Call it on each item: price_with_tax(item1) and price_with_tax(item2).",
+            "return price_with_tax(item1) + price_with_tax(item2)"
+          ],
+          "modelSolution": "def price_with_tax(price):\n    return round(price * 1.08, 2)\n\ndef cart_total(item1, item2):\n    return price_with_tax(item1) + price_with_tax(item2)",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m06-l6",
+            "prompt": "Why call the price_with_tax helper inside cart_total instead of writing the tax math again?",
+            "expected": "Reuse. Write the math once, call it wherever needed. If the tax rate changes, you fix one place instead of many."
+          }
+        },
+        {
+          "id": "m06-l6-s3",
+          "kind": "reflection",
+          "conceptTags": ["return"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck, because this is the idea people trip on most: explain the difference between return and print in your own plain words. When would you want each? If you can explain this cleanly, you have the hardest part of functions down."
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m06-boss",
+    "name": "The Untangling",
+    "taunt": "One tangled calculation. Carve it into clean, named pieces and make them work together.",
+    "brief": "This is the whole point of the module: take one job and decompose it into small functions that call each other. You are building a workout calorie tracker, in three layers.\n\nWrite these three functions:\n\n1. calories(minutes, rate): returns minutes times rate. The plain building block.\n\n2. total_calories(run_min, bike_min): running burns 10 calories a minute, biking burns 8. Return the combined total. The elegant way calls calories() twice, once at rate 10 and once at rate 8.\n\n3. summary(run_min, bike_min): returns a sentence in exactly this shape (call total_calories to get the number):\n   You burned 780 calories today.\n\nWorked example: summary(30, 60) means 30 minutes running (300) plus 60 minutes biking (480), a total of 780, so it returns: You burned 780 calories today.\n\nEach function does one job and leans on the one below it. That is decomposition, and it is how real programs are built.",
+    "emblem": "m06-boss.svg",
+    "hiddenTests": [
+      { "id": "m06-boss-t1", "code": "assert calories(30, 10) == 300", "message": "calories(30, 10) is 30 times 10, which is 300" },
+      { "id": "m06-boss-t2", "code": "assert calories(0, 8) == 0", "message": "calories(0, 8) should be 0" },
+      { "id": "m06-boss-t3", "code": "assert total_calories(30, 60) == 780", "message": "30 min running at 10 is 300, 60 min biking at 8 is 480, total 780" },
+      { "id": "m06-boss-t4", "code": "assert total_calories(0, 0) == 0", "message": "no exercise should total 0 calories" },
+      { "id": "m06-boss-t5", "code": "assert summary(30, 60) == \"You burned 780 calories today.\"", "message": "summary should return the exact sentence, with the total dropped in: You burned 780 calories today." },
+      { "id": "m06-boss-t6", "code": "assert summary(10, 0) == \"You burned 100 calories today.\"", "message": "10 min running only is 100 calories, so summary(10, 0) reads You burned 100 calories today." }
+    ],
+    "modelSolution": "def calories(minutes, rate):\n    return minutes * rate\n\ndef total_calories(run_min, bike_min):\n    return calories(run_min, 10) + calories(bike_min, 8)\n\ndef summary(run_min, bike_min):\n    return f\"You burned {total_calories(run_min, bike_min)} calories today.\"",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m06-t1", "term": "function (def)", "definition": "A named, reusable block of code. You DEFINE it once with def (the recipe, which runs nothing), then CALL it by name with parentheses whenever you need it.", "kind": "function", "strand": "core", "sourceModuleId": "m06", "sourceLessonId": "m06-l1" },
+    { "id": "m06-t2", "term": "parameter vs argument", "definition": "A parameter is the placeholder name in the def line (like n). An argument is the actual value you pass in when you call (like the 5 in double(5)).", "kind": "concept", "strand": "core", "sourceModuleId": "m06", "sourceLessonId": "m06-l2" },
+    { "id": "m06-t3", "term": "return", "definition": "Hands a value back to whoever called the function, so the program can use it. Different from print, which only shows a value on screen. The moment return runs, the function stops.", "kind": "concept", "strand": "core", "sourceModuleId": "m06", "sourceLessonId": "m06-l3" },
+    { "id": "m06-t4", "term": "default value", "definition": "A fallback for a parameter, as in greeting=\"Hello\". If the caller leaves it out, the default is used. Defaults come after the non-default parameters.", "kind": "concept", "strand": "core", "sourceModuleId": "m06", "sourceLessonId": "m06-l4" },
+    { "id": "m06-t5", "term": "None", "definition": "Python's word for nothing, on purpose. A function with no return hands back None. Also used deliberately to mean no value yet. Not 0, not an empty string.", "kind": "concept", "strand": "core", "sourceModuleId": "m06", "sourceLessonId": "m06-l4" },
+    { "id": "m06-t6", "term": "scope", "definition": "A variable made inside a function is local: it lives only while the function runs and is invisible outside. Each function gets its own private workspace. The way out is return.", "kind": "concept", "strand": "core", "sourceModuleId": "m06", "sourceLessonId": "m06-l5" },
+    { "id": "m06-t7", "term": "decomposition", "definition": "Breaking one big job into small, named functions that each do one thing and can call each other. How large programs stay readable.", "kind": "concept", "strand": "design", "sourceModuleId": "m06", "sourceLessonId": "m06-l6" }
+  ]
+}

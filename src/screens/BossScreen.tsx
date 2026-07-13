@@ -27,7 +27,11 @@ let runIdSeq = 0;
 export function BossScreen({ boss, worker, reducedMotion, inputCapable = true, onVictory, onExit }: BossScreenProps) {
   const [phase, setPhase] = useState<"vsIntro" | "battle">("vsIntro");
   const [animate, setAnimate] = useState(false);
-  const [code, setCode] = useState("def printReceipt(items):\n    total = 0\n    for name, price in items:\n        print(f\"{name}: {price}\")\n        total += price\n    # TODO: total line + empty cart\n");
+  // curriculum-bundle round: this used to hardcode a "printReceipt" starter snippet that only
+  // matched the OLD fixture's m03 boss. The Boss contract (CONTRACT 4) has no starterCode field,
+  // so every real boss now starts from an honest empty editor rather than a wrong, misleading
+  // example from a boss the learner may not even be fighting.
+  const [code, setCode] = useState("");
   const [results, setResults] = useState<TestOutcome[] | null>(null);
   const [victory, setVictory] = useState(false);
   const [sweep, setSweep] = useState(false);

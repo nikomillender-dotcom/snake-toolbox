@@ -1,0 +1,270 @@
+{
+  "id": "m03",
+  "title": "Reading Errors",
+  "phase": 1,
+  "strands": ["debug", "core"],
+  "producesArtifact": false,
+  "conceptTags": ["tracebacks", "nameerror", "typeerror", "syntaxerror", "indexerror", "valueerror"],
+  "lessons": [
+    {
+      "id": "m03-l1",
+      "title": "A Traceback Is a Map",
+      "steps": [
+        {
+          "id": "m03-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["tracebacks"],
+          "strand": "debug",
+          "reviewable": false,
+          "body": "Welcome back. You can store values and do math with them now. Today we deal with the thing that scares people off programming more than anything else: the wall of red error text.\n\nHere is the reframe that changes everything. An error is not Python yelling at you. It is Python HELPING you. Every error message is a little map that tells you two things: what went wrong, and exactly where.\n\nThat wall of text is called a traceback. Read it from the BOTTOM up. The very last line is the important one: it names the type of error and gives a short message. Just above that, Python points at the exact line it tripped on. So the bottom line is what broke, and the line above is where. Once you read tracebacks instead of fearing them, you stop being stuck and start being a debugger. Nobody writes code without errors. The whole skill is reading them."
+        },
+        {
+          "id": "m03-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["tracebacks", "nameerror"],
+          "strand": "debug",
+          "reviewable": false,
+          "prompt": "Run this on purpose. It breaks. Read the bottom line of the traceback: it names the error and the line.",
+          "code": "score = 100\nprint(scoer)"
+        },
+        {
+          "id": "m03-l1-s3",
+          "kind": "mcq",
+          "conceptTags": ["tracebacks", "typeerror"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "You run a program and the bottom line of the traceback says:  TypeError: can only concatenate str (not \"int\") to str.  In plain words, what is Python telling you?",
+          "code": "TypeError: can only concatenate str (not \"int\") to str",
+          "choices": [
+            "You tried to combine two kinds of values that do not mix, like adding a number onto text.",
+            "You used a name Python has never seen before.",
+            "Your code is not shaped like valid Python.",
+            "You asked a list for a position that does not exist."
+          ],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m03-l1",
+            "prompt": "A TypeError means what, in plain words?",
+            "expected": "You tried to combine two kinds of values that do not mix, like adding a number to text."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m03-l2",
+      "title": "The Usual Suspects",
+      "steps": [
+        {
+          "id": "m03-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["nameerror", "typeerror", "syntaxerror", "indexerror", "valueerror"],
+          "strand": "debug",
+          "reviewable": false,
+          "body": "Almost every error you hit for months will be one of five. Learn these five faces and you will recognize most trouble on sight.\n\nNameError: you used a name Python has never seen. Usually a typo, or you forgot to create it.\nTypeError: you tried to mix two kinds of values that do not go together, like adding text to a number.\nSyntaxError: the code is not shaped like valid Python (a missing colon, an unclosed quote or bracket). Python cannot even begin to run it.\nIndexError: you asked a list for a slot that is not there, like the 5th item of a 3-item list.\nValueError: the value is the right TYPE but the wrong CONTENT, like asking int() to read the word twenty, or the decimal \"3.5\".\n\nThat is the whole rogues gallery. Let us practice spotting them."
+        },
+        {
+          "id": "m03-l2-s2",
+          "kind": "mcq",
+          "conceptTags": ["indexerror"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "Read this in your head. The list has three items (positions 0, 1, 2). Which error does the last line raise?",
+          "code": "items = [10, 20, 30]\nprint(items[5])",
+          "choices": ["NameError", "IndexError", "TypeError", "ValueError"],
+          "answerIndex": 1,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m03-l2",
+            "prompt": "Asking a 3-item list for items[5] raises which error?",
+            "expected": "IndexError, the position does not exist."
+          }
+        },
+        {
+          "id": "m03-l2-s3",
+          "kind": "mcq",
+          "conceptTags": ["valueerror"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "int() can read a string of digits, but not a word. Which error does this raise?",
+          "code": "age = int(\"twenty\")",
+          "choices": ["SyntaxError", "ValueError", "NameError", "TypeError"],
+          "answerIndex": 1,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m03-l2",
+            "prompt": "int(\"twenty\") raises which error? The value is a string (right type) but not readable as a number (wrong content).",
+            "expected": "ValueError."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m03-l3",
+      "title": "Find and Fix",
+      "steps": [
+        {
+          "id": "m03-l3-s1",
+          "kind": "fixBug",
+          "conceptTags": ["nameerror"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "Run it in your head and you get a NameError: name 'sid' is not defined. Read that as a map: the name sid does not exist. Find the typo and fix it so the function returns the area of a square.",
+          "starterCode": "def area_of_square(side):\n    # should return side times side\n    return sid * side",
+          "hiddenTests": [
+            { "id": "m03-l3-s1-t1", "code": "assert area_of_square(4) == 16", "message": "area_of_square(4) should be 16 (4 times 4)" },
+            { "id": "m03-l3-s1-t2", "code": "assert area_of_square(1) == 1", "message": "area_of_square(1) should be 1" }
+          ],
+          "hints": [
+            "The error names the culprit: sid. There is no box called sid.",
+            "You meant the parameter side. It is a one-letter typo.",
+            "return side * side"
+          ],
+          "modelSolution": "def area_of_square(side):\n    return side * side",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m03-l3",
+            "prompt": "NameError: name 'sid' is not defined. Fix the typo.",
+            "starterCode": "def area_of_square(side):\n    return sid * side",
+            "hiddenTests": [
+              { "id": "m03-l3-s1-rt1", "code": "assert area_of_square(4) == 16", "message": "the name should be side, not sid" }
+            ],
+            "hints": ["return side * side"]
+          }
+        },
+        {
+          "id": "m03-l3-s2",
+          "kind": "fixBug",
+          "conceptTags": ["typeerror"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This raises TypeError: can only concatenate str (not \"int\") to str. Translation: you are gluing a number onto text. score is a number. Fix it so label_score(10) returns the string Score: 10.",
+          "starterCode": "def label_score(score):\n    # score is a number, like 10\n    return \"Score: \" + score",
+          "hiddenTests": [
+            { "id": "m03-l3-s2-t1", "code": "assert label_score(10) == \"Score: 10\"", "message": "label_score(10) should return the string: Score: 10" },
+            { "id": "m03-l3-s2-t2", "code": "assert label_score(0) == \"Score: 0\"", "message": "check 0 too: it should read Score: 0" }
+          ],
+          "hints": [
+            "You cannot add a number onto text. Turn the number into text first with str(), or use an f-string.",
+            "str(score) turns 10 into \"10\". Or write f\"Score: {score}\".",
+            "return f\"Score: {score}\""
+          ],
+          "modelSolution": "def label_score(score):\n    return f\"Score: {score}\"",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m03-l3",
+            "prompt": "TypeError from gluing a number onto text. Fix it.",
+            "starterCode": "def label_score(score):\n    return \"Score: \" + score",
+            "hiddenTests": [
+              { "id": "m03-l3-s2-rt1", "code": "assert label_score(10) == \"Score: 10\"", "message": "use str(score) or an f-string" }
+            ],
+            "hints": ["return f\"Score: {score}\""]
+          }
+        }
+      ]
+    },
+    {
+      "id": "m03-l4",
+      "title": "Off by One, and Breaking It on Purpose",
+      "steps": [
+        {
+          "id": "m03-l4-s1",
+          "kind": "fixBug",
+          "conceptTags": ["indexerror"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This is meant to return the THIRD item of a list. On a three-item list it raises IndexError: list index out of range. Remember that positions start at 0, so the third item lives at position 2, not 3. Fix it.",
+          "starterCode": "def third_item(items):\n    # positions start at 0: 0, 1, 2, ...\n    return items[3]",
+          "hiddenTests": [
+            { "id": "m03-l4-s1-t1", "code": "assert third_item([\"a\", \"b\", \"c\"]) == \"c\"", "message": "the third item of [a, b, c] is c, which lives at position 2" },
+            { "id": "m03-l4-s1-t2", "code": "assert third_item([10, 20, 30, 40]) == 30", "message": "the third item should be 30, at position 2, not position 3" }
+          ],
+          "hints": [
+            "Positions start counting at 0, so item one is at 0, item two is at 1, item three is at 2.",
+            "items[3] is actually the fourth slot, which does not exist in a three-item list.",
+            "return items[2]"
+          ],
+          "modelSolution": "def third_item(items):\n    return items[2]",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m03-l4",
+            "prompt": "IndexError, off by one. The third item is at which position?",
+            "starterCode": "def third_item(items):\n    return items[3]",
+            "hiddenTests": [
+              { "id": "m03-l4-s1-rt1", "code": "assert third_item([\"a\", \"b\", \"c\"]) == \"c\"", "message": "positions start at 0, so the third item is items[2]" }
+            ],
+            "hints": ["return items[2]"]
+          }
+        },
+        {
+          "id": "m03-l4-s2",
+          "kind": "fixBug",
+          "conceptTags": ["valueerror"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "The text here is a temperature like \"36.6\". Calling int() on it raises ValueError: invalid literal for int(). The value is a real number, just not a WHOLE one, so int() refuses it. Fix read_temp so it returns the decimal as a number.",
+          "starterCode": "def read_temp(text):\n    # text is a decimal reading, like \"36.6\"\n    return int(text)",
+          "hiddenTests": [
+            { "id": "m03-l4-s2-t1", "code": "assert abs(read_temp(\"36.6\") - 36.6) < 0.005", "message": "read_temp(\"36.6\") should give the number 36.6" },
+            { "id": "m03-l4-s2-t2", "code": "assert abs(read_temp(\"98.4\") - 98.4) < 0.005", "message": "read_temp(\"98.4\") should give 98.4, so it must handle any decimal" }
+          ],
+          "hints": [
+            "int() only reads whole numbers. \"36.6\" has a decimal point.",
+            "The tool for decimals is float(), the same way int() is the tool for whole numbers.",
+            "return float(text)"
+          ],
+          "modelSolution": "def read_temp(text):\n    return float(text)",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m03-l4",
+            "prompt": "ValueError: int() cannot read \"36.6\". Which converter reads decimals?",
+            "starterCode": "def read_temp(text):\n    return int(text)",
+            "hiddenTests": [
+              { "id": "m03-l4-s2-rt1", "code": "assert abs(read_temp(\"36.6\") - 36.6) < 0.005", "message": "use float(text) for decimals" }
+            ],
+            "hints": ["return float(text)"]
+          }
+        },
+        {
+          "id": "m03-l4-s3",
+          "kind": "reflection",
+          "conceptTags": ["tracebacks"],
+          "strand": "debug",
+          "reviewable": false,
+          "prompt": "Break something on purpose. In the scratch console, write a tiny line you KNOW will fail (misspell a name, or add a number to a word), run it, and read the traceback. Then, in a sentence or two, describe: which of the five errors did you get, and how did the bottom line of the traceback tell you exactly what and where? Making errors happen on demand is how you stop fearing them."
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m03-boss",
+    "name": "The Debugging Gauntlet",
+    "taunt": "Five programs. Five bugs. One of each classic kind. Read the maps and fix them all.",
+    "brief": "This is not about writing something new. It is about READING five broken programs, diagnosing each from its error, and fixing it. Write the five corrected functions in the editor. Each one has exactly one of the five classic bugs.\n\n1. NameError. Fix the typo so it returns width times height.\n   def rectangle_area(width, height):\n       return width * hieght\n\n2. TypeError. seat is a number. Make ticket(\"Niko\", 12) return the string: Niko seat 12\n   def ticket(name, seat):\n       return name + \" seat \" + seat\n\n3. SyntaxError. Something is missing at the end of the def line. is_even(4) should be True, is_even(3) should be False.\n   def is_even(n)\n       return n % 2 == 0\n\n4. IndexError. Positions start at 0. second_item([\"x\", \"y\"]) should return \"y\".\n   def second_item(items):\n       return items[2]\n\n5. ValueError. The text is a price like \"9.99\". int() refuses a decimal. Make to_price(\"9.99\") return the number 9.99.\n   def to_price(text):\n       return int(text)\n\nFix all five and make every check pass. You clear the gauntlet when the console is green.",
+    "emblem": "m03-boss.svg",
+    "hiddenTests": [
+      { "id": "m03-boss-t1", "code": "assert rectangle_area(3, 4) == 12", "message": "NameError one: fix the hieght typo so rectangle_area(3, 4) is 12", "group": "NameError" },
+      { "id": "m03-boss-t2", "code": "assert ticket(\"Niko\", 12) == \"Niko seat 12\"", "message": "TypeError one: turn the number into text (str() or an f-string) so ticket(\"Niko\", 12) reads Niko seat 12", "group": "TypeError" },
+      { "id": "m03-boss-t3", "code": "assert is_even(4) == True and is_even(3) == False", "message": "SyntaxError one: the def line needs a colon at the end", "group": "SyntaxError" },
+      { "id": "m03-boss-t4", "code": "assert second_item([\"x\", \"y\"]) == \"y\"", "message": "IndexError one: the second item is at position 1, not 2", "group": "IndexError" },
+      { "id": "m03-boss-t5", "code": "assert abs(to_price(\"9.99\") - 9.99) < 0.005", "message": "ValueError one: use float() to read the decimal price", "group": "ValueError" }
+    ],
+    "modelSolution": "def rectangle_area(width, height):\n    return width * height\n\ndef ticket(name, seat):\n    return f\"{name} seat {seat}\"\n\ndef is_even(n):\n    return n % 2 == 0\n\ndef second_item(items):\n    return items[1]\n\ndef to_price(text):\n    return float(text)",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m03-t1", "term": "traceback", "definition": "The block of error text Python prints when something breaks. Read it bottom-up: the last line names the error and the line above points at where it happened.", "kind": "concept", "strand": "debug", "sourceModuleId": "m03", "sourceLessonId": "m03-l1" },
+    { "id": "m03-t2", "term": "NameError", "definition": "You used a name Python has never seen. Usually a typo or a variable you forgot to create.", "kind": "concept", "strand": "debug", "sourceModuleId": "m03", "sourceLessonId": "m03-l2" },
+    { "id": "m03-t3", "term": "TypeError", "definition": "You tried to combine two kinds of values that do not mix, like adding a number onto text.", "kind": "concept", "strand": "debug", "sourceModuleId": "m03", "sourceLessonId": "m03-l2" },
+    { "id": "m03-t4", "term": "SyntaxError", "definition": "The code is not shaped like valid Python (a missing colon, an unclosed quote or bracket). Python cannot even start.", "kind": "concept", "strand": "debug", "sourceModuleId": "m03", "sourceLessonId": "m03-l2" },
+    { "id": "m03-t5", "term": "IndexError", "definition": "You asked a list for a position that does not exist, like the 5th item of a 3-item list. Positions start at 0.", "kind": "concept", "strand": "debug", "sourceModuleId": "m03", "sourceLessonId": "m03-l2" },
+    { "id": "m03-t6", "term": "ValueError", "definition": "The value is the right type but the wrong content, like asking int() to read the word twenty or the decimal \"3.5\".", "kind": "concept", "strand": "debug", "sourceModuleId": "m03", "sourceLessonId": "m03-l2" }
+  ]
+}

@@ -1,0 +1,346 @@
+{
+  "id": "m07",
+  "title": "Lists and Mutability",
+  "phase": 1,
+  "strands": ["core", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["lists", "indexing", "slicing", "list-methods", "iteration", "mutability", "aliasing"],
+  "lessons": [
+    {
+      "id": "m07-l1",
+      "title": "A List Holds Many",
+      "steps": [
+        {
+          "id": "m07-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["lists", "indexing"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome back. You can write functions now, which means you can build real tools. Today you get a container to build them around.\n\nSo far each variable holds ONE value. A list holds many, in order. You make one with square brackets and commas: scores = [90, 85, 72]. Now a single name holds the whole collection.\n\nYou reach one item by its position, its index, in square brackets. Here is the rule that catches everyone (you already met it as IndexError): positions start at 0. So scores[0] is the first item, 90, and scores[1] is the second, 85. Two more handies: a negative index counts from the end, so scores[-1] is always the LAST item however long the list is, and len(scores) tells you how many items are in it."
+        },
+        {
+          "id": "m07-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["lists", "indexing"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. First item, last item, and how many.",
+          "code": "scores = [90, 85, 72]\nprint(scores[0])\nprint(scores[-1])\nprint(len(scores))"
+        },
+        {
+          "id": "m07-l1-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["indexing"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Positions start at 0, so position 1 is the SECOND item. What prints?",
+          "code": "colors = [\"red\", \"green\", \"blue\"]\nprint(colors[1])",
+          "expected": "green",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m07-l1",
+            "prompt": "colors = [\"red\", \"green\", \"blue\"]. What is colors[1]?",
+            "code": "colors = [\"red\", \"green\", \"blue\"]\nprint(colors[1])",
+            "expected": "green"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m07-l2",
+      "title": "Slicing and Iterating",
+      "steps": [
+        {
+          "id": "m07-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["slicing", "iteration"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "You can grab a whole SLICE (a sub-list) with two positions: items[1:3] gives you positions 1 and 2. Notice it stops BEFORE the second number, exactly like range did. Shortcuts: items[:2] is the first two, and items[2:] is from position 2 to the end.\n\nThe natural partner of a list is the for loop. for score in scores: walks every item in order, handing you one at a time, no indexing required. This is the everyday way to work through a list: loop over it and do something with each item. Combine that with the accumulator you learned, and you can total, count, or collect anything."
+        },
+        {
+          "id": "m07-l2-s2",
+          "kind": "liveExample",
+          "conceptTags": ["slicing", "iteration"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. A slice, then a walk through every item.",
+          "code": "nums = [10, 20, 30, 40, 50]\nprint(nums[1:3])\nfor n in nums:\n    print(n)"
+        },
+        {
+          "id": "m07-l2-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["slicing"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "items[:2] means from the start up to (but not including) position 2. Python prints a list with square brackets and quotes around text. What prints exactly?",
+          "code": "letters = [\"a\", \"b\", \"c\", \"d\"]\nprint(letters[:2])",
+          "expected": "['a', 'b']",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m07-l2",
+            "prompt": "What does letters[:2] print for [\"a\", \"b\", \"c\", \"d\"]?",
+            "code": "letters = [\"a\", \"b\", \"c\", \"d\"]\nprint(letters[:2])",
+            "expected": "['a', 'b']"
+          }
+        },
+        {
+          "id": "m07-l2-s4",
+          "kind": "predictOutput",
+          "conceptTags": ["iteration"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Loop and accumulate, the same pattern from Module 5, now over a list. What prints?",
+          "code": "prices = [4, 6, 10]\ntotal = 0\nfor p in prices:\n    total += p\nprint(total)",
+          "expected": "20",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m07-l2",
+            "prompt": "Total the list [4, 6, 10] with a loop. What prints?",
+            "code": "prices = [4, 6, 10]\ntotal = 0\nfor p in prices:\n    total += p\nprint(total)",
+            "expected": "20"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m07-l3",
+      "title": "List Methods",
+      "steps": [
+        {
+          "id": "m07-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["list-methods"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Lists come with built-in verbs, called methods, that you call with a dot. The big ones:\n.append(x) adds x to the end. This is the workhorse.\n.remove(x) deletes the first x it finds.\n.sort() puts the items in order, low to high or alphabetical.\n\nAnd two built-in helpers that TAKE a list: sum(numbers) adds them all up, and max(numbers) finds the biggest.\n\nappend is the one you will lean on most. Start with an empty list, [], then loop and append to collect results as you go. That is the list version of the accumulator: instead of adding to a number, you are building up a list."
+        },
+        {
+          "id": "m07-l3-s2",
+          "kind": "liveExample",
+          "conceptTags": ["list-methods"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Start empty, append twice, check the result and the length.",
+          "code": "todo = []\ntodo.append(\"wash car\")\ntodo.append(\"call mom\")\nprint(todo)\nprint(len(todo))"
+        },
+        {
+          "id": "m07-l3-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["list-methods"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": ".sort() reorders the list in place, smallest first. What prints?",
+          "code": "nums = [3, 1, 2]\nnums.sort()\nprint(nums)",
+          "expected": "[1, 2, 3]",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m07-l3",
+            "prompt": "nums = [3, 1, 2], then nums.sort(). What prints?",
+            "code": "nums = [3, 1, 2]\nnums.sort()\nprint(nums)",
+            "expected": "[1, 2, 3]"
+          }
+        },
+        {
+          "id": "m07-l3-s4",
+          "kind": "parsons",
+          "conceptTags": ["list-methods", "iteration"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Drag these into order to build a new list holding only the numbers bigger than 5. Start with an empty list, walk the numbers, and append the ones that pass. Watch the two levels of indentation.",
+          "scrambled": ["result = []", "for n in nums:", "        result.append(n)", "    if n > 5:"],
+          "solutionOrder": [0, 1, 3, 2],
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m07-l3",
+            "prompt": "To collect only some items from a list into a new list, what three ingredients do you need?",
+            "expected": "An empty list to start, a for loop to walk the items, and an if inside that appends only the ones that pass."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m07-l4",
+      "title": "Mutability and Aliasing",
+      "steps": [
+        {
+          "id": "m07-l4-s1",
+          "kind": "prose",
+          "conceptTags": ["mutability", "aliasing"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Here is the surprise that trips up nearly everyone. Understanding it will save you hours of head-scratching.\n\nA list is MUTABLE: you can change its contents in place, after it is made. Numbers and strings are not like that; a list is. That flexibility hides a catch.\n\nWhen you write b = a and a is a list, you do NOT get a copy. Both names now point at the SAME list, like two labels stuck on one box. So if you change the list through b, the change shows up through a too, because there is only one list underneath. This sharing is called aliasing.\n\nIf you truly want a separate copy, ask for one: b = a.copy(). Then they are two independent boxes. Any time a change to one list mysteriously appears in another, aliasing is almost always the reason."
+        },
+        {
+          "id": "m07-l4-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["aliasing"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "This is the classic surprise. b = a does NOT copy. We change the list through b, then print a. What prints?",
+          "code": "a = [1, 2, 3]\nb = a\nb.append(4)\nprint(a)",
+          "expected": "[1, 2, 3, 4]",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m07-l4",
+            "prompt": "a = [1, 2, 3]; b = a; b.append(4). What does print(a) show?",
+            "code": "a = [1, 2, 3]\nb = a\nb.append(4)\nprint(a)",
+            "expected": "[1, 2, 3, 4]"
+          }
+        },
+        {
+          "id": "m07-l4-s3",
+          "kind": "mcq",
+          "conceptTags": ["aliasing"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "You write b = a where a is a list, then b.append(9). Which statement is true?",
+          "choices": [
+            "a and b point at the same list, so a now ends with 9 too.",
+            "b changes but a is untouched, because b is a copy.",
+            "It raises an error.",
+            "a becomes just [9]."
+          ],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m07-l4",
+            "prompt": "b = a (both lists), then b.append(9). Does a change?",
+            "expected": "Yes. b = a does not copy; both names point at the same list, so appending through b changes a too."
+          }
+        },
+        {
+          "id": "m07-l4-s4",
+          "kind": "traceTable",
+          "conceptTags": ["mutability"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Trace the list as it changes in place: append 15 to the end, then overwrite position 0 with a new value. What prints?",
+          "code": "nums = [5, 10]\nnums.append(15)\nnums[0] = 0\nprint(nums)",
+          "expected": "[0, 10, 15]",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m07-l4",
+            "prompt": "Trace it: nums = [5, 10]; append 15; set nums[0] = 0. What prints?",
+            "code": "nums = [5, 10]\nnums.append(15)\nnums[0] = 0\nprint(nums)",
+            "expected": "[0, 10, 15]"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m07-l5",
+      "title": "Build: Filter and Summarize",
+      "steps": [
+        {
+          "id": "m07-l5-s1",
+          "kind": "prose",
+          "conceptTags": ["lists", "iteration"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Two moves show up in almost every program that touches data: FILTER (keep only the items that match a rule) and SUMMARIZE (boil a list down to one number, like a total or an average). You already have every piece: a loop, an if, an empty list to append into, and functions to wrap it all up. Let us put them together."
+        },
+        {
+          "id": "m07-l5-s2",
+          "kind": "writeStub",
+          "conceptTags": ["iteration", "list-methods"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Write only_positive(nums) so it returns a NEW list containing only the numbers greater than 0 (drop negatives AND zero). Build an empty list, loop, append the ones that pass, and return it.",
+          "starterCode": "def only_positive(nums):\n    # return a new list of just the numbers greater than 0\n    result = []\n    # your loop here\n    return result",
+          "hiddenTests": [
+            { "id": "m07-l5-s2-t1", "code": "assert only_positive([1, -2, 3, 0, -5]) == [1, 3]", "message": "keep only the numbers above 0, so -2, 0, and -5 all drop out, leaving [1, 3]" },
+            { "id": "m07-l5-s2-t2", "code": "assert only_positive([-1, -2]) == []", "message": "when nothing is positive, return an empty list" },
+            { "id": "m07-l5-s2-t3", "code": "assert only_positive([4, 5]) == [4, 5]", "message": "when all are positive, keep them all" },
+            { "id": "m07-l5-s2-t4", "code": "assert only_positive([]) == []", "message": "an empty list in should give an empty list out" }
+          ],
+          "hints": [
+            "Loop over nums with for n in nums.",
+            "Inside, check if n > 0 (greater than, so 0 does not count).",
+            "When it passes, result.append(n)."
+          ],
+          "modelSolution": "def only_positive(nums):\n    result = []\n    for n in nums:\n        if n > 0:\n            result.append(n)\n    return result",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m07-l5",
+            "prompt": "The filter pattern: what three lines make it work (start, walk, keep)?",
+            "expected": "Start with result = []; walk with for n in nums; keep with if n > 0: result.append(n). Then return result."
+          }
+        },
+        {
+          "id": "m07-l5-s3",
+          "kind": "fixBug",
+          "conceptTags": ["iteration", "accumulator"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This should return every number doubled, but it only ever returns the last one in a list. Trace it: the result = [] line is INSIDE the loop, so it wipes the list clean on every pass. Move it so the list survives across the whole loop.",
+          "starterCode": "def doubled(nums):\n    for n in nums:\n        result = []\n        result.append(n * 2)\n    return result",
+          "hiddenTests": [
+            { "id": "m07-l5-s3-t1", "code": "assert doubled([1, 2, 3]) == [2, 4, 6]", "message": "doubled([1, 2, 3]) should be [2, 4, 6], not just the last item" },
+            { "id": "m07-l5-s3-t2", "code": "assert doubled([5]) == [10]", "message": "a single item should still work: [5] becomes [10]" },
+            { "id": "m07-l5-s3-t3", "code": "assert doubled([]) == []", "message": "check the empty list: it should return an empty list, not crash" }
+          ],
+          "hints": [
+            "Every time the loop repeats, result = [] throws away everything collected so far.",
+            "You want ONE list that lives across the whole loop, so it must be created before the loop starts.",
+            "Move result = [] up, above the for line."
+          ],
+          "modelSolution": "def doubled(nums):\n    result = []\n    for n in nums:\n        result.append(n * 2)\n    return result",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m07-l5",
+            "prompt": "This keeps only the last doubled value. Where should result = [] go?",
+            "starterCode": "def doubled(nums):\n    for n in nums:\n        result = []\n        result.append(n * 2)\n    return result",
+            "hiddenTests": [
+              { "id": "m07-l5-s3-rt1", "code": "assert doubled([1, 2, 3]) == [2, 4, 6]", "message": "move result = [] to before the loop so it is not reset each pass" }
+            ],
+            "hints": ["result = [] belongs before the for loop."]
+          }
+        },
+        {
+          "id": "m07-l5-s4",
+          "kind": "reflection",
+          "conceptTags": ["aliasing"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck: explain, in plain words, why writing b = a (where a is a list) does not give you a safe copy. What is the mental picture (hint: two labels, one box), and how do you get a real copy when you need one?"
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m07-boss",
+    "name": "The Data Sieve",
+    "taunt": "A month of numbers. Sift out what matters and tell me the story in one figure.",
+    "brief": "Real data work is two moves: filter out what you care about, then summarize it. You get a list of daily step counts and you build both tools.\n\nWrite two functions:\n\n1. high_scorers(steps, cutoff): return a NEW list holding only the days at or above the cutoff (use >=). Filter.\n\n2. average(steps): return the average of the list, rounded to 2 decimals. Summarize. IMPORTANT: if the list is empty, return 0.0 rather than crashing on a divide by zero. (sum(steps) adds a list up, len(steps) counts it.)\n\nWorked example: high_scorers([5000, 8000, 12000, 7000], 7500) is [8000, 12000] (only the days that met the bar). average([5000, 8000, 12000, 7000]) is 8000.0.\n\nThis is everything from the module: lists, iteration, a condition, append, and a careful check for the empty case.",
+    "emblem": "m07-boss.svg",
+    "hiddenTests": [
+      { "id": "m07-boss-t1", "code": "assert high_scorers([5000, 8000, 12000, 7000], 7500) == [8000, 12000]", "message": "keep only the days at or above 7500, which are 8000 and 12000" },
+      { "id": "m07-boss-t2", "code": "assert high_scorers([5000, 6000], 7500) == []", "message": "when no day meets the cutoff, return an empty list" },
+      { "id": "m07-boss-t3", "code": "assert high_scorers([7500, 9000], 7500) == [7500, 9000]", "message": "the cutoff is inclusive, so a day exactly at 7500 counts (use >=)" },
+      { "id": "m07-boss-t4", "code": "assert abs(average([5000, 8000, 12000, 7000]) - 8000.0) < 0.005", "message": "the average of those four days is 8000.0" },
+      { "id": "m07-boss-t5", "code": "assert abs(average([70, 75]) - 72.5) < 0.005", "message": "average([70, 75]) should be 72.5" },
+      { "id": "m07-boss-t6", "code": "assert abs(average([]) - 0.0) < 0.005", "message": "an empty list should return 0.0, so guard against dividing by a length of zero" }
+    ],
+    "modelSolution": "def high_scorers(steps, cutoff):\n    result = []\n    for day in steps:\n        if day >= cutoff:\n            result.append(day)\n    return result\n\ndef average(steps):\n    if not steps:\n        return 0.0\n    return round(sum(steps) / len(steps), 2)",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m07-t1", "term": "list", "definition": "An ordered container that holds many values: [90, 85, 72]. Reach an item by its index (positions start at 0), and len() tells you how many.", "kind": "concept", "strand": "core", "sourceModuleId": "m07", "sourceLessonId": "m07-l1" },
+    { "id": "m07-t2", "term": "index", "definition": "A position in a list, counted from 0. items[0] is the first, items[-1] is the last. Asking for a position that does not exist is an IndexError.", "kind": "concept", "strand": "core", "sourceModuleId": "m07", "sourceLessonId": "m07-l1" },
+    { "id": "m07-t3", "term": "slice", "definition": "A sub-list grabbed with two positions: items[1:3] gives positions 1 and 2. It stops before the second number, like range.", "kind": "concept", "strand": "core", "sourceModuleId": "m07", "sourceLessonId": "m07-l2" },
+    { "id": "m07-t4", "term": ".append()", "definition": "Adds an item to the end of a list. The workhorse for building a list up: start with [] and append inside a loop.", "kind": "function", "strand": "core", "sourceModuleId": "m07", "sourceLessonId": "m07-l3" },
+    { "id": "m07-t5", "term": "mutable", "definition": "Able to be changed in place after it is made. Lists are mutable; numbers and strings are not. This is what makes append and item assignment possible.", "kind": "concept", "strand": "core", "sourceModuleId": "m07", "sourceLessonId": "m07-l4" },
+    { "id": "m07-t6", "term": "aliasing", "definition": "When two names point at the SAME list, so a change through one shows up through the other. b = a shares the list; b = a.copy() makes a separate one.", "kind": "concept", "strand": "core", "sourceModuleId": "m07", "sourceLessonId": "m07-l4" }
+  ]
+}

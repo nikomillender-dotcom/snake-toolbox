@@ -1,0 +1,259 @@
+{
+  "id": "m10",
+  "title": "Files and the Workspace",
+  "phase": 1,
+  "strands": ["core", "ship", "debug"],
+  "producesArtifact": true,
+  "conceptTags": ["file-read", "file-write", "json", "filesystem"],
+  "lessons": [
+    {
+      "id": "m10-l1",
+      "title": "Files: Data That Survives",
+      "steps": [
+        {
+          "id": "m10-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["filesystem"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome back, and take a breath: this is the last module of Phase 1. Everything you have built so far forgets everything the moment it stops running. Files fix that. A file is how a program saves data to come back to later, so a tracker remembers yesterday's numbers and a game remembers your progress.\n\nYou open a file, read from it or write to it, and the data lives on between runs. In Snake ToolBox your files live in the workspace, the file rail beside your editor.\n\nOne honest note, because we do not pretend here: in this app, that workspace is a virtual filesystem kept safely inside your browser, not your computer's real hard drive. On a desktop, the exact same Python code writes to your real disk instead. Same skill, same code, just a different drawer it lands in."
+        },
+        {
+          "id": "m10-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["file-write", "file-read"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. It writes a file, then reads it back. Watch the file appear in your workspace rail.",
+          "code": "with open(\"hello.txt\", \"w\") as f:\n    f.write(\"Data that survives.\\n\")\n\nwith open(\"hello.txt\") as f:\n    print(f.read())"
+        },
+        {
+          "id": "m10-l1-s3",
+          "kind": "mcq",
+          "conceptTags": ["filesystem"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "In Snake ToolBox, where does a file you write with open() actually live?",
+          "choices": [
+            "In a virtual filesystem inside your browser. On a desktop, the same code writes to your real disk.",
+            "Nowhere. It is deleted the instant your program ends.",
+            "On Snake ToolBox's servers, uploaded automatically.",
+            "Only in the console output, never as a real file."
+          ],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m10-l1",
+            "prompt": "Where do files you write live in this app, and where would the same code write on a desktop?",
+            "expected": "In a virtual filesystem in your browser here; on a desktop the same code writes to your real hard drive."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m10-l2",
+      "title": "Reading and Writing Text",
+      "steps": [
+        {
+          "id": "m10-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["file-read", "file-write"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Two things to get right with open().\n\nFirst, the mode. open(path) opens for READING. open(path, \"w\") opens for WRITING, and it starts the file fresh, erasing whatever was there. open(path, \"a\") APPENDS to the end without erasing. Choose carefully: opening in \"w\" when you meant to read will wipe your data.\n\nSecond, always use with. Writing with open(path, \"w\") as f: makes Python close the file for you when the block ends, even if something goes wrong along the way. Forgetting to close a file is a classic cause of missing or half-written data, and with just handles it.\n\nTo read the whole thing as one string, f.read(). To go line by line, loop directly: for line in f: hands you one line at a time. To write, f.write(text), and note it does not add line breaks for you, so you tack on \\n yourself."
+        },
+        {
+          "id": "m10-l2-s2",
+          "kind": "liveExample",
+          "conceptTags": ["file-write", "file-read"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Write two lines, then read them back one at a time.",
+          "code": "with open(\"scores.txt\", \"w\") as f:\n    f.write(\"90\\n\")\n    f.write(\"85\\n\")\n\nwith open(\"scores.txt\") as f:\n    for line in f:\n        print(line.strip())"
+        },
+        {
+          "id": "m10-l2-s3",
+          "kind": "parsons",
+          "conceptTags": ["file-write"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Drag these into order to write a two-line log file. The open-with line comes first, and the two writes are indented inside its block.",
+          "scrambled": ["    f.write(\"done\\n\")", "with open(\"log.txt\", \"w\") as f:", "    f.write(\"start\\n\")"],
+          "solutionOrder": [1, 2, 0],
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m10-l2",
+            "prompt": "Why write file code inside a with open(...) as f: block?",
+            "expected": "with closes the file for you automatically when the block ends, so data is never left half-written."
+          }
+        },
+        {
+          "id": "m10-l2-s4",
+          "kind": "fillBlank",
+          "conceptTags": ["file-write"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Which one-letter mode opens a file for writing (starting it fresh)? Fill the blank: open(path, \"_\")",
+          "expected": "w",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m10-l2",
+            "prompt": "The mode letter for writing a file fresh is: open(path, \"_\")",
+            "expected": "w"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m10-l3",
+      "title": "JSON: Saving Structured Data",
+      "steps": [
+        {
+          "id": "m10-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["json"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Plain text files are fine for simple lines, but your real data is richer: lists and dicts, the containers from last module. JSON is the standard way to save those to a file and load them back with their exact shape intact.\n\nTwo functions from the json module do it all. json.dump(data, f) writes your list or dict to an open file. json.load(f) reads it back, rebuilt as the same list or dict. So you can save a list of dictionaries (say, a workout log) and reload it next session with every entry exactly as it was.\n\nThis is how data actually survives in most apps you use. Bring it in with import json at the top."
+        },
+        {
+          "id": "m10-l3-s2",
+          "kind": "liveExample",
+          "conceptTags": ["json"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Save a list of dicts as JSON, then load it back with its shape intact.",
+          "code": "import json\n\nlog = [{\"activity\": \"run\", \"minutes\": 30}]\nwith open(\"log.json\", \"w\") as f:\n    json.dump(log, f)\n\nwith open(\"log.json\") as f:\n    loaded = json.load(f)\nprint(loaded)\nprint(loaded[0][\"activity\"])"
+        },
+        {
+          "id": "m10-l3-s3",
+          "kind": "mcq",
+          "conceptTags": ["json"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "You want to save a list of dictionaries to a file and later load it back with its exact shape. What is the standard tool?",
+          "choices": [
+            "JSON, with json.dump to save and json.load to reload.",
+            "f.write() the dict line by line as text.",
+            "print() it and copy the output by hand.",
+            "Store it in a set."
+          ],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m10-l3",
+            "prompt": "Best way to save and reload a list of dicts with its shape intact?",
+            "expected": "JSON: json.dump(data, f) to save, json.load(f) to reload."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m10-l4",
+      "title": "Process What You Read",
+      "steps": [
+        {
+          "id": "m10-l4-s1",
+          "kind": "prose",
+          "conceptTags": ["json"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "The real shape of a data program is three steps: read the data in, PROCESS it, then write it back out. The reading and writing you have now seen. The processing in the middle is just the loops, conditions, and dict work you already know, applied to whatever you loaded. Let us sharpen that middle step, then the boss ties all three together."
+        },
+        {
+          "id": "m10-l4-s2",
+          "kind": "writeStub",
+          "conceptTags": ["json", "dict"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "You loaded a workout log: a list of entry dicts, each with an \"activity\" and a \"minutes\". Write total_minutes(entries) that adds up all the minutes across the list. This is the PROCESS step.",
+          "starterCode": "def total_minutes(entries):\n    # entries is a list of dicts like {\"activity\": \"run\", \"minutes\": 30}\n    # return the total of all the minutes\n    pass",
+          "hiddenTests": [
+            { "id": "m10-l4-s2-t1", "code": "assert total_minutes([{\"activity\": \"run\", \"minutes\": 30}, {\"activity\": \"bike\", \"minutes\": 45}]) == 75", "message": "add every entry's minutes: 30 plus 45 is 75" },
+            { "id": "m10-l4-s2-t2", "code": "assert total_minutes([]) == 0", "message": "an empty log should total 0 minutes" },
+            { "id": "m10-l4-s2-t3", "code": "assert total_minutes([{\"activity\": \"swim\", \"minutes\": 20}]) == 20", "message": "a single entry should total its own minutes" }
+          ],
+          "hints": [
+            "Start a total at 0 before the loop.",
+            "Loop over the entries and reach into each with entry[\"minutes\"].",
+            "total += entry[\"minutes\"], then return total."
+          ],
+          "modelSolution": "def total_minutes(entries):\n    total = 0\n    for entry in entries:\n        total += entry[\"minutes\"]\n    return total",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m10-l4",
+            "prompt": "To total the minutes across a list of entry dicts, how do you reach each entry's minutes?",
+            "expected": "Loop the list and use entry[\"minutes\"], adding each to a running total."
+          }
+        },
+        {
+          "id": "m10-l4-s3",
+          "kind": "fixBug",
+          "conceptTags": ["file-read", "numbers"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "You read numbers out of a file, so they came in as STRINGS (lines of text). This function tries to total them but crashes, because you cannot add text to a number total. Convert each line before adding. This is the same string-versus-number lesson from way back, now with file data.",
+          "starterCode": "def sum_lines(lines):\n    # lines is a list of number strings like [\"90\", \"85\"]\n    total = 0\n    for line in lines:\n        total += line\n    return total",
+          "hiddenTests": [
+            { "id": "m10-l4-s3-t1", "code": "assert sum_lines([\"90\", \"85\"]) == 175", "message": "convert each line to a number first: 90 plus 85 is 175" },
+            { "id": "m10-l4-s3-t2", "code": "assert sum_lines([]) == 0", "message": "an empty list should total 0" },
+            { "id": "m10-l4-s3-t3", "code": "assert sum_lines([\"10\"]) == 10", "message": "a single line \"10\" should total the number 10" }
+          ],
+          "hints": [
+            "Lines read from a file are strings, so \"90\" is text, not a number.",
+            "Wrap each line in int() before adding it to the total.",
+            "total += int(line)"
+          ],
+          "modelSolution": "def sum_lines(lines):\n    total = 0\n    for line in lines:\n        total += int(line)\n    return total",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m10-l4",
+            "prompt": "Lines from a file are strings. Fix this total.",
+            "starterCode": "def sum_lines(lines):\n    total = 0\n    for line in lines:\n        total += line\n    return total",
+            "hiddenTests": [
+              { "id": "m10-l4-s3-rt1", "code": "assert sum_lines([\"90\", \"85\"]) == 175", "message": "convert each line with int() before adding" }
+            ],
+            "hints": ["total += int(line)"]
+          }
+        },
+        {
+          "id": "m10-l4-s4",
+          "kind": "reflection",
+          "conceptTags": ["filesystem", "json"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck, and look how far you have come: describe the three-step shape of a data program (read, process, write back), and give one example of something in your own life you could now save and reload between runs. Next stop, your first real artifact."
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m10-boss",
+    "name": "The Keeper of Records",
+    "taunt": "Everything you have learned, in one program that finally REMEMBERS. Build the thing that outlives its own run.",
+    "brief": "This is the Phase 1 capstone, and it ties together all ten modules. You are building a personal tracker that saves your workouts to a file and reloads them, so it remembers across runs. When you clear it, this ships to your GitHub portfolio as your first real artifact, and you unlock the PCEP marker.\n\nWrite two functions. Do NOT call them yourself; the check runs them for you.\n\n1. log_workout(path, activity, minutes): the read-process-write cycle in one function.\n   - If a file already exists at path, load the list of entries from it (it is JSON). If not, start with an empty list.\n   - Append a new entry: {\"activity\": activity, \"minutes\": minutes}.\n   - Save the whole updated list back to the file as JSON.\n   - Return the updated list.\n   To check whether the file exists yet, use os.path.exists(path) (import os and import json at the top).\n\n2. total_minutes(entries): return the total minutes across a list of entries (you wrote this one already).\n\nWorked flow: on a fresh file, log_workout(path, \"run\", 30) returns [{\"activity\": \"run\", \"minutes\": 30}]. Call it again with \"bike\", 45 and the returned list now holds BOTH entries, and reloading the file proves they were saved. That is data surviving between runs.",
+    "emblem": "m10-boss.svg",
+    "hiddenTests": [
+      { "id": "m10-boss-t1", "code": "import os, json\np = \"/grading/keeper_test_1.json\"\nif os.path.exists(p):\n    os.remove(p)\nr1 = log_workout(p, \"run\", 30)\nassert r1 == [{\"activity\": \"run\", \"minutes\": 30}]", "message": "on a fresh file, the first workout should give back a one-entry list: run for 30 minutes" },
+      { "id": "m10-boss-t2", "code": "import os, json\np = \"/grading/keeper_test_2.json\"\nif os.path.exists(p):\n    os.remove(p)\nlog_workout(p, \"run\", 30)\nr2 = log_workout(p, \"bike\", 45)\nassert r2 == [{\"activity\": \"run\", \"minutes\": 30}, {\"activity\": \"bike\", \"minutes\": 45}]", "message": "a second call should APPEND, so the returned list holds both the run and the bike, in order" },
+      { "id": "m10-boss-t3", "code": "import os, json\np = \"/grading/keeper_test_3.json\"\nif os.path.exists(p):\n    os.remove(p)\nlog_workout(p, \"run\", 30)\nlog_workout(p, \"bike\", 45)\nwith open(p) as f:\n    saved = json.load(f)\nassert saved == [{\"activity\": \"run\", \"minutes\": 30}, {\"activity\": \"bike\", \"minutes\": 45}]", "message": "the data must actually be SAVED to the file, so reloading it from disk shows both entries. Write the updated list back with json.dump" },
+      { "id": "m10-boss-t4", "code": "import os, json\np = \"/grading/keeper_test_4.json\"\nif os.path.exists(p):\n    os.remove(p)\nlog_workout(p, \"swim\", 20)\nreloaded = log_workout(p, \"walk\", 15)\nassert total_minutes(reloaded) == 35", "message": "total_minutes over the reloaded list should sum both sessions: 20 plus 15 is 35" },
+      { "id": "m10-boss-t5", "code": "assert total_minutes([]) == 0", "message": "total_minutes of an empty log should be 0" }
+    ],
+    "modelSolution": "import os\nimport json\n\ndef log_workout(path, activity, minutes):\n    if os.path.exists(path):\n        with open(path) as f:\n            entries = json.load(f)\n    else:\n        entries = []\n    entries.append({\"activity\": activity, \"minutes\": minutes})\n    with open(path, \"w\") as f:\n        json.dump(entries, f)\n    return entries\n\ndef total_minutes(entries):\n    total = 0\n    for entry in entries:\n        total += entry[\"minutes\"]\n    return total",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m10-t1", "term": "open()", "definition": "Opens a file so you can read or write it. open(path) reads; open(path, \"w\") writes fresh (erasing what was there); open(path, \"a\") appends. Best used inside a with block.", "kind": "function", "strand": "core", "sourceModuleId": "m10", "sourceLessonId": "m10-l2" },
+    { "id": "m10-t2", "term": "with (context)", "definition": "with open(path) as f: automatically closes the file when the block ends, even if something goes wrong. The safe way to handle files.", "kind": "concept", "strand": "core", "sourceModuleId": "m10", "sourceLessonId": "m10-l2" },
+    { "id": "m10-t3", "term": "json.dump / json.load", "definition": "Save and reload structured data. json.dump(data, f) writes a list or dict to an open file; json.load(f) reads it back with its exact shape.", "kind": "function", "strand": "core", "sourceModuleId": "m10", "sourceLessonId": "m10-l3" },
+    { "id": "m10-t4", "term": "workspace filesystem", "definition": "Where your files live in Snake ToolBox: a virtual filesystem kept in your browser. On a desktop, the same code writes to your real disk.", "kind": "concept", "strand": "core", "sourceModuleId": "m10", "sourceLessonId": "m10-l1" },
+    { "id": "m10-t5", "term": "read, process, write", "definition": "The three-step shape of most data programs: read data in, transform it with the loops and dicts you know, then write the result back out.", "kind": "phrase", "strand": "core", "sourceModuleId": "m10", "sourceLessonId": "m10-l4" }
+  ]
+}

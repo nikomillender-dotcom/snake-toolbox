@@ -1,0 +1,25 @@
+{
+  "id": "m24",
+  "title": "Functions as Objects",
+  "phase": 3,
+  "strands": ["design", "read", "core"],
+  "producesArtifact": true,
+  "conceptTags": ["first-class-functions", "closures", "nonlocal", "decorators", "functools", "wraps", "lru_cache", "partial"],
+  "lessons": [
+    {
+      "id": "m24-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m24-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["decorators"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. This is Pillar 2, a marquee module. Here you will understand the machinery behind Flask routes, pytest fixtures, and @property: functions as first-class objects, closures, nonlocal, decorators, and functools (wraps, lru_cache, partial). It is taught slowly and only after functions are very solid. Its boss is build-it-yourself: a real decorator applied to your carry project. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

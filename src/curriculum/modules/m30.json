@@ -1,0 +1,25 @@
+{
+  "id": "m30",
+  "title": "The Survival Kit",
+  "phase": 3,
+  "strands": ["ship", "design", "tests"],
+  "producesArtifact": true,
+  "conceptTags": ["pyproject", "venv", "pip", "project-layout", "version-control", "packaging", "readme"],
+  "lessons": [
+    {
+      "id": "m30-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m30-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["project-layout"],
+          "strand": "ship",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you learn how real projects are structured, shared, and shipped, adapted honestly to the browser (pyproject.toml literacy, what a venv isolates and what pip resolves, project layout as a live debate, version-control literacy, and packaging concepts). It ends with carry project v1.0: structured, tested, documented, and shipped to your GitHub portfolio repo with its full module-by-module history visible. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

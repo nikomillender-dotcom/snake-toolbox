@@ -1,0 +1,25 @@
+{
+  "id": "m33",
+  "title": "Solo Flight",
+  "phase": 4,
+  "strands": ["ship", "design", "read"],
+  "producesArtifact": true,
+  "conceptTags": ["project-scoping", "notes-as-memory", "tests-as-confidence", "issues", "library-literacy", "teach-back", "willison-loop"],
+  "lessons": [
+    {
+      "id": "m33-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m33-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["willison-loop"],
+          "strand": "ship",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. This is the handoff. Here you install the habits that keep many small projects alive, alone, forever (project scoping, notes as memory, tests as confidence, issues as external memory, library literacy, and teach-back as a standing practice). You will scope, build, test, and document one project of your own choosing, ship it, and cross into sandbox mode with a portfolio that is already full. Not a certificate: a handoff. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

@@ -1,0 +1,25 @@
+{
+  "id": "m25",
+  "title": "Context Managers",
+  "phase": 3,
+  "strands": ["design", "read", "core"],
+  "producesArtifact": true,
+  "conceptTags": ["with", "enter", "exit", "contextlib", "contextmanager"],
+  "lessons": [
+    {
+      "id": "m25-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m25-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["with"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. This is Pillar 4, a marquee module. Here you will manage setup and teardown cleanly with the with statement (__enter__ and __exit__, contextlib and @contextmanager, and why files and locks use them). Its boss is build-it-yourself: your own context manager, in both the class form and the @contextmanager form. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

@@ -1,10 +1,15 @@
 // Production no-mock guard (S3): proves that no production source file (src/ excluding
-// src/mocks/ and test files) imports from src/mocks/ EXCEPT the two explicitly allowlisted
-// DATA fixtures. The mocks directory is for tests ONLY; execution mocks must never ship.
+// src/mocks/ and test files) imports from src/mocks/ EXCEPT the explicitly allowlisted
+// DATA fixture(s). The mocks directory is for tests ONLY; execution mocks must never ship.
 //
 // RULE: any prod non-test file importing from /mocks/ is a violation, UNLESS the imported
-// module is on the DATA_FIXTURE_ALLOWLIST (curriculum data and stat sheet fixtures are data,
-// not execution mocks, and are acceptable until the real CurriculumBundle loader ships).
+// module is on the DATA_FIXTURE_ALLOWLIST (a data-only stand-in with no runtime behavior, no
+// network calls, no state, acceptable until its real binding ships).
+//
+// curriculum-bundle round: the real CurriculumBundle loader (src/curriculum/realCurriculumBundle.ts)
+// now ships and App.tsx/AppRoot.tsx are wired to it, so curriculumFixture is REMOVED from this
+// allowlist. It still exists in src/mocks/ for tests only (isTestFile() below already exempts
+// *.test.ts / *.test.tsx from this scan entirely, so no allowlist entry is needed for test usage).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve, relative } from "node:path";
 
@@ -19,7 +24,6 @@ const MOCK_IMPORT_PATTERN = /from\s+["'][^"']*\/mocks\/([^"']+)["']/;
 // stand-ins for the CurriculumBundle loader and stat sheet derivation until those are
 // wired to real content. They contain no runtime behavior, no network calls, no state.
 const DATA_FIXTURE_ALLOWLIST = new Set([
-  "curriculumFixture",
   "statSheetFixtures",
 ]);
 

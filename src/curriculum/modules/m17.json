@@ -1,0 +1,25 @@
+{
+  "id": "m17",
+  "title": "Text and Pattern Matching",
+  "phase": 2,
+  "strands": ["core", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["regex", "character-classes", "quantifiers", "groups", "re-module"],
+  "lessons": [
+    {
+      "id": "m17-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m17-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["regex"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will learn to match and extract structured text with regular expressions (character classes, quantifiers, groups, the re module), and just as importantly, when NOT to reach for regex. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

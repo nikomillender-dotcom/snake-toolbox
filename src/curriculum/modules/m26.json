@@ -1,0 +1,25 @@
+{
+  "id": "m26",
+  "title": "Data That Persists",
+  "phase": 3,
+  "strands": ["design", "ship", "core"],
+  "producesArtifact": true,
+  "conceptTags": ["sqlite3", "tables", "schema", "crud", "queries", "orm-concepts"],
+  "lessons": [
+    {
+      "id": "m26-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m26-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["sqlite3"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will store real structured data by giving your carry project a sqlite database (tables and schema, CRUD, basic queries, data modeling, and what an ORM does and why). The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

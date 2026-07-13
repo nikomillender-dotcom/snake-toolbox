@@ -1,0 +1,25 @@
+{
+  "id": "m21",
+  "title": "Thinking About Cost",
+  "phase": 3,
+  "strands": ["design", "read", "debug"],
+  "producesArtifact": true,
+  "conceptTags": ["big-o", "recursion-depth", "stack", "queue", "searching", "sorting"],
+  "lessons": [
+    {
+      "id": "m21-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m21-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["big-o"],
+          "strand": "design",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Phase 3 opens here, and so does your carry project. This module teaches you to reason about performance and structure without the LeetCode grind (Big-O literacy, recursion depth, practical structures like stacks and queues, and when a dict or set beats a list). The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

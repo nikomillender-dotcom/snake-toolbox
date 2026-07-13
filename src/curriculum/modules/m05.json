@@ -1,0 +1,313 @@
+{
+  "id": "m05",
+  "title": "Repetition",
+  "phase": 1,
+  "strands": ["core", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["while", "for", "range", "break", "continue", "accumulator"],
+  "lessons": [
+    {
+      "id": "m05-l1",
+      "title": "Doing It Again with while",
+      "steps": [
+        {
+          "id": "m05-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["while"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome back. You can branch now. Today you learn to repeat, which is where the computer really earns its keep: it will do the same thing ten times or ten million times without complaint.\n\nThe while loop is the easiest to picture: keep running this block AS LONG AS a condition stays true. Each time through, Python rechecks the condition at the top. The moment it is false, the loop ends and the program moves on to whatever comes after.\n\nHere is the one trap everyone hits once: if the condition never becomes false, the loop runs forever (an infinite loop). So a while loop almost always changes something inside itself to march the condition toward false, like counting a number down until it hits zero."
+        },
+        {
+          "id": "m05-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["while"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this countdown. Notice the last line inside the loop is what eventually makes the condition false.",
+          "code": "count = 3\nwhile count > 0:\n    print(count)\n    count = count - 1\nprint(\"Liftoff!\")"
+        },
+        {
+          "id": "m05-l1-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["while"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Walk it around the loop. n starts at 1 and grows by 1 each time, and the loop runs while n is under 4. What prints (one number per line)?",
+          "code": "n = 1\nwhile n < 4:\n    print(n)\n    n = n + 1",
+          "expected": "1\n2\n3",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m05-l1",
+            "prompt": "What does this print, one number per line?",
+            "code": "n = 1\nwhile n < 4:\n    print(n)\n    n = n + 1",
+            "expected": "1\n2\n3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m05-l2",
+      "title": "for and range",
+      "steps": [
+        {
+          "id": "m05-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["for", "range"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "The for loop is the workhorse you will reach for most. It walks through a collection one item at a time: for item in things: runs the block once for each value, with item holding each one in turn. No manual counter to manage, no infinite-loop risk.\n\nWhen you just want to repeat a set number of times, range() hands you a run of numbers. range(5) gives 0, 1, 2, 3, 4: five numbers, starting at 0 and stopping BEFORE 5. That stop-before part trips up everyone exactly once, so bank it now: range(n) gives you n numbers, from 0 up to n minus 1."
+        },
+        {
+          "id": "m05-l2-s2",
+          "kind": "liveExample",
+          "conceptTags": ["for"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. The loop variable fruit takes each value in turn.",
+          "code": "for fruit in [\"apple\", \"pear\", \"plum\"]:\n    print(fruit)"
+        },
+        {
+          "id": "m05-l2-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["range"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Remember range starts at 0 and stops BEFORE its number. What prints (one per line)?",
+          "code": "for i in range(3):\n    print(i)",
+          "expected": "0\n1\n2",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m05-l2",
+            "prompt": "What does range(3) print, one per line?",
+            "code": "for i in range(3):\n    print(i)",
+            "expected": "0\n1\n2"
+          }
+        },
+        {
+          "id": "m05-l2-s4",
+          "kind": "parsons",
+          "conceptTags": ["for", "accumulator"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Drag these into order to total a list of numbers: start the total at 0, add each number as you walk the list, then print the total. Mind the indentation (the adding line lives inside the loop).",
+          "scrambled": ["    total = total + n", "for n in numbers:", "print(total)", "total = 0"],
+          "solutionOrder": [3, 1, 0, 2],
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m05-l2",
+            "prompt": "To total a list with a for loop, what has to happen BEFORE the loop starts?",
+            "expected": "You set the total to 0 before the loop, so there is a box to add into as you walk the list."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m05-l3",
+      "title": "Accumulators",
+      "steps": [
+        {
+          "id": "m05-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["accumulator"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "The pattern you just built has a name: an accumulator. Start a value before the loop (usually 0 for a sum, or empty for collecting), then update it a little on every pass. Summing, counting, tallying: they are all this one shape.\n\nPython gives you a shorthand for the update. total += n is exactly total = total + n, just tidier. Likewise count += 1 bumps a counter by one each time around. You will read and write += constantly, so let it become second nature."
+        },
+        {
+          "id": "m05-l3-s2",
+          "kind": "traceTable",
+          "conceptTags": ["accumulator"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Trace total as the loop runs: it starts at 0, then adds 4, then 5, then 6. What is the final value printed?",
+          "code": "total = 0\nfor n in [4, 5, 6]:\n    total += n\nprint(total)",
+          "expected": "15",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m05-l3",
+            "prompt": "Trace the accumulator. What is the final total?",
+            "code": "total = 0\nfor n in [4, 5, 6]:\n    total += n\nprint(total)",
+            "expected": "15"
+          }
+        },
+        {
+          "id": "m05-l3-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["accumulator", "for"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "A for loop can walk the letters of a word, one at a time. Here we count them. What prints?",
+          "code": "count = 0\nfor letter in \"hello\":\n    count += 1\nprint(count)",
+          "expected": "5",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m05-l3",
+            "prompt": "How many times does the loop run over \"hello\", and what prints?",
+            "code": "count = 0\nfor letter in \"hello\":\n    count += 1\nprint(count)",
+            "expected": "5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m05-l4",
+      "title": "break and continue",
+      "steps": [
+        {
+          "id": "m05-l4-s1",
+          "kind": "prose",
+          "conceptTags": ["break", "continue"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Two little words give you fine control inside any loop.\n\nbreak bails out of the loop entirely, right now, no matter how many items are left. Reach for it the instant you have found what you came for, so you stop wasting turns.\n\ncontinue skips the rest of THIS turn and jumps straight to the next item. Reach for it when you want to ignore certain items but keep the loop going.\n\nSame loop, two escape hatches: break leaves the building, continue skips to the next room."
+        },
+        {
+          "id": "m05-l4-s2",
+          "kind": "predictOutput",
+          "conceptTags": ["break"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "break leaves the loop immediately. The print happens BEFORE the check each time. What prints (one per line)?",
+          "code": "for n in [1, 2, 3, 4, 5]:\n    if n == 3:\n        break\n    print(n)",
+          "expected": "1\n2",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m05-l4",
+            "prompt": "The loop breaks when n hits 3. What prints, one per line?",
+            "code": "for n in [1, 2, 3, 4, 5]:\n    if n == 3:\n        break\n    print(n)",
+            "expected": "1\n2"
+          }
+        },
+        {
+          "id": "m05-l4-s3",
+          "kind": "mcq",
+          "conceptTags": ["continue"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "You are looping over numbers and you want to SKIP the even ones but keep going through the rest of the list. Which keyword do you use?",
+          "choices": ["break", "continue", "else", "return"],
+          "answerIndex": 1,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m05-l4",
+            "prompt": "Skip this item but keep the loop going: break or continue?",
+            "expected": "continue. It skips the rest of this turn and moves to the next item. break would stop the whole loop."
+          }
+        },
+        {
+          "id": "m05-l4-s4",
+          "kind": "fixBug",
+          "conceptTags": ["range", "accumulator"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This should add up 1 + 2 + ... + n, INCLUDING n itself, but it always comes up short by n. The culprit is range: it stops BEFORE its second number. Fix it so sum_to(5) is 15.",
+          "starterCode": "def sum_to(n):\n    total = 0\n    for i in range(1, n):\n        total += i\n    return total",
+          "hiddenTests": [
+            { "id": "m05-l4-s4-t1", "code": "assert sum_to(5) == 15", "message": "1 + 2 + 3 + 4 + 5 is 15, so n itself must be included" },
+            { "id": "m05-l4-s4-t2", "code": "assert sum_to(1) == 1", "message": "sum_to(1) should be 1, the single number 1" },
+            { "id": "m05-l4-s4-t3", "code": "assert sum_to(3) == 6", "message": "sum_to(3) should be 1 + 2 + 3, which is 6" }
+          ],
+          "hints": [
+            "range(1, n) stops BEFORE n, so the last number it hands out is n minus 1.",
+            "To include n, the range has to go one past it.",
+            "Use range(1, n + 1)."
+          ],
+          "modelSolution": "def sum_to(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m05-l4",
+            "prompt": "This sum is short by n because range stops early. Fix the range.",
+            "starterCode": "def sum_to(n):\n    total = 0\n    for i in range(1, n):\n        total += i\n    return total",
+            "hiddenTests": [
+              { "id": "m05-l4-s4-rt1", "code": "assert sum_to(5) == 15", "message": "use range(1, n + 1) to include n" }
+            ],
+            "hints": ["range(1, n + 1)"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "m05-l5",
+      "title": "Build a Tally",
+      "steps": [
+        {
+          "id": "m05-l5-s1",
+          "kind": "prose",
+          "conceptTags": ["accumulator", "for", "range"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Let us combine everything: a loop, a range, a condition, and an accumulator, all in one small function. This is the shape of a huge amount of real code, so it is worth doing from scratch. Remember your remainder trick from Module 2: n % 2 == 0 asks is this number even."
+        },
+        {
+          "id": "m05-l5-s2",
+          "kind": "writeStub",
+          "conceptTags": ["for", "range", "accumulator"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Write sum_evens(n) so it adds up every even number from 1 to n, including n if it is even. Example: sum_evens(6) is 2 + 4 + 6, which is 12. Loop with range (mind the stop-before rule), check each number with the even trick, and accumulate.",
+          "starterCode": "def sum_evens(n):\n    # add up the even numbers from 1 to n (inclusive)\n    total = 0\n    # your loop here\n    return total",
+          "hiddenTests": [
+            { "id": "m05-l5-s2-t1", "code": "assert sum_evens(6) == 12", "message": "sum_evens(6) is 2 + 4 + 6, which is 12" },
+            { "id": "m05-l5-s2-t2", "code": "assert sum_evens(1) == 0", "message": "sum_evens(1) should be 0: there are no even numbers from 1 to 1" },
+            { "id": "m05-l5-s2-t3", "code": "assert sum_evens(10) == 30", "message": "sum_evens(10) is 2 + 4 + 6 + 8 + 10, which is 30, so 10 itself must be included" },
+            { "id": "m05-l5-s2-t4", "code": "assert sum_evens(2) == 2", "message": "sum_evens(2) should be 2, the only even number in range" }
+          ],
+          "hints": [
+            "To include n, loop over range(1, n + 1).",
+            "Inside the loop, check if i % 2 == 0 before adding.",
+            "When it is even, do total += i."
+          ],
+          "modelSolution": "def sum_evens(n):\n    total = 0\n    for i in range(1, n + 1):\n        if i % 2 == 0:\n            total += i\n    return total",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fillBlank",
+            "sourceLessonId": "m05-l5",
+            "prompt": "Fill the blank to check for an even number inside the loop: if i % 2 ___ 0:",
+            "expected": "=="
+          }
+        },
+        {
+          "id": "m05-l5-s3",
+          "kind": "reflection",
+          "conceptTags": ["for", "while"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck: in plain words, when would you reach for a for loop versus a while loop? A hint to get you started: one is best when you know the collection you are walking through, the other when you are waiting for a condition to change."
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m05-boss",
+    "name": "Press Your Luck",
+    "taunt": "Keep rolling, keep scoring. But one wrong roll and it all burns down.",
+    "brief": "A push-your-luck dice game. You get a list of dice rolls and you add them to your score, one by one, as you go. But there is a catch: the moment you roll a 1, your turn ends and you keep only what you banked BEFORE the 1.\n\nWrite score_run(rolls) that walks the list, adds each roll to a running total, and stops the instant it sees a 1 (without counting that 1). Return the total.\n\nWorked examples:\nscore_run([3, 4, 2]) is 9 (no 1 appears, so add them all).\nscore_run([5, 1, 6]) is 5 (add the 5, then the 1 ends the turn, the 6 is never reached).\nscore_run([1, 2, 3]) is 0 (a 1 right away, nothing banked).\n\nThis is a for loop, an accumulator, and a break, working together. Everything from this module in one function.\n\ndef score_run(rolls):",
+    "emblem": "m05-boss.svg",
+    "hiddenTests": [
+      { "id": "m05-boss-t1", "code": "assert score_run([3, 4, 2]) == 9", "message": "no 1 appears, so add all of them: 3 + 4 + 2 is 9" },
+      { "id": "m05-boss-t2", "code": "assert score_run([5, 1, 6]) == 5", "message": "add the 5, then the 1 must stop the loop with break, so the 6 is never counted" },
+      { "id": "m05-boss-t3", "code": "assert score_run([1, 2, 3]) == 0", "message": "a 1 on the very first roll should bank nothing, so break before adding it" },
+      { "id": "m05-boss-t4", "code": "assert score_run([]) == 0", "message": "an empty list should return 0: the loop simply never runs" },
+      { "id": "m05-boss-t5", "code": "assert score_run([2, 2, 2, 2]) == 8", "message": "with no 1 at all, the whole list is added: four 2s make 8" }
+    ],
+    "modelSolution": "def score_run(rolls):\n    total = 0\n    for roll in rolls:\n        if roll == 1:\n            break\n        total += roll\n    return total",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m05-t1", "term": "while loop", "definition": "Repeats a block as long as a condition stays true, rechecking at the top each time. Make sure something inside marches the condition toward false, or it loops forever.", "kind": "concept", "strand": "core", "sourceModuleId": "m05", "sourceLessonId": "m05-l1" },
+    { "id": "m05-t2", "term": "for loop", "definition": "Walks through a collection one item at a time: for item in things: runs the block once per value, with item holding each in turn.", "kind": "concept", "strand": "core", "sourceModuleId": "m05", "sourceLessonId": "m05-l2" },
+    { "id": "m05-t3", "term": "range()", "definition": "Hands you a run of numbers. range(5) gives 0, 1, 2, 3, 4: starts at 0 and stops BEFORE the number. range(1, n + 1) is how you count 1 through n inclusive.", "kind": "function", "strand": "core", "sourceModuleId": "m05", "sourceLessonId": "m05-l2" },
+    { "id": "m05-t4", "term": "accumulator", "definition": "Start a value before a loop (often 0), then update it each pass. The shape behind summing, counting, and tallying. total += n is the tidy way to add.", "kind": "concept", "strand": "core", "sourceModuleId": "m05", "sourceLessonId": "m05-l3" },
+    { "id": "m05-t5", "term": "break", "definition": "Leaves the loop entirely, right now, no matter how many items remain. Use it the moment you have found what you needed.", "kind": "concept", "strand": "core", "sourceModuleId": "m05", "sourceLessonId": "m05-l4" },
+    { "id": "m05-t6", "term": "continue", "definition": "Skips the rest of the current turn and jumps to the next item, without leaving the loop. Use it to ignore certain items but keep going.", "kind": "concept", "strand": "core", "sourceModuleId": "m05", "sourceLessonId": "m05-l4" }
+  ]
+}

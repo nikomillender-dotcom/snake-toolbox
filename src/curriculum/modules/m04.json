@@ -1,0 +1,261 @@
+{
+  "id": "m04",
+  "title": "Making Decisions",
+  "phase": 1,
+  "strands": ["core", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["if", "elif", "else", "comparison", "boolean-operators", "truthiness"],
+  "lessons": [
+    {
+      "id": "m04-l1",
+      "title": "If This, Then That",
+      "steps": [
+        {
+          "id": "m04-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["if"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome back. You can read a traceback like a map now, which means you are already braver than most beginners. Today your programs start making choices.\n\nSo far your code runs every line, top to bottom, no matter what. An if statement changes that: it runs a block of code only WHEN a condition is true.\n\nAn if has three parts: the word if, a yes-or-no question (one of those booleans from Module 2), and a colon. Then the lines that belong to the if are INDENTED underneath, usually four spaces. That indent is not decoration. It is how Python knows which lines live inside the if and which come after. Think of it like a bullet point: everything tucked under the if only happens if the answer is yes."
+        },
+        {
+          "id": "m04-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["if"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. The two indented lines only fire because it is over 80. The last line always runs.",
+          "code": "temperature = 90\nif temperature > 80:\n    print(\"It is hot out.\")\n    print(\"Bring water.\")\nprint(\"Have a good day.\")"
+        },
+        {
+          "id": "m04-l1-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["if"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The condition is False this time (15 is not 18 or older). Remember, the indented line only runs when the answer is yes. What prints?",
+          "code": "age = 15\nif age >= 18:\n    print(\"You can vote.\")\nprint(\"Done.\")",
+          "expected": "Done.",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m04-l1",
+            "prompt": "age is 15. What does this print?",
+            "code": "age = 15\nif age >= 18:\n    print(\"You can vote.\")\nprint(\"Done.\")",
+            "expected": "Done."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m04-l2",
+      "title": "else and elif",
+      "steps": [
+        {
+          "id": "m04-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["elif", "else"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "if handles the yes. else handles everything else: the block under else runs only when the if was false. Together they are a fork in the road, and exactly one path is taken.\n\nWhen you have more than two paths, elif (short for else-if) lets you line up more questions. Python checks them top to bottom and runs the FIRST one that is true, then skips all the rest. Order matters: once a branch wins, the others never even get asked. So put your most specific or highest-priority conditions first."
+        },
+        {
+          "id": "m04-l2-s2",
+          "kind": "liveExample",
+          "conceptTags": ["elif", "else"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Python checks top to bottom and stops at the first true branch.",
+          "code": "score = 72\nif score >= 90:\n    print(\"A\")\nelif score >= 80:\n    print(\"B\")\nelif score >= 70:\n    print(\"C\")\nelse:\n    print(\"Try again\")"
+        },
+        {
+          "id": "m04-l2-s3",
+          "kind": "parsons",
+          "conceptTags": ["if", "else"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Drag these four lines into order to make a working if/else that prints Adult when age is 18 or over, and Minor otherwise. Watch the indentation.",
+          "scrambled": ["else:", "    print(\"Minor\")", "if age >= 18:", "    print(\"Adult\")"],
+          "solutionOrder": [2, 3, 0, 1],
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m04-l2",
+            "prompt": "In an if/else, which comes first: the if line or the else line, and which lines are indented?",
+            "expected": "The if line comes first, then its indented body, then else:, then its indented body. The bodies are indented; if and else are not."
+          }
+        },
+        {
+          "id": "m04-l2-s4",
+          "kind": "predictOutput",
+          "conceptTags": ["elif", "else"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Walk the branches top to bottom for n = 0. Which one wins?",
+          "code": "n = 0\nif n > 0:\n    print(\"positive\")\nelif n < 0:\n    print(\"negative\")\nelse:\n    print(\"zero\")",
+          "expected": "zero",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m04-l2",
+            "prompt": "n is 0. Which branch prints?",
+            "code": "n = 0\nif n > 0:\n    print(\"positive\")\nelif n < 0:\n    print(\"negative\")\nelse:\n    print(\"zero\")",
+            "expected": "zero"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m04-l3",
+      "title": "Combining Conditions",
+      "steps": [
+        {
+          "id": "m04-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["boolean-operators", "comparison", "truthiness"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Sometimes one question is not enough. Join them with and, or, and not.\n\nand is true only when BOTH sides are true. or is true when EITHER side is true. not simply flips true and false. So you can ask if age >= 13 and age <= 19 for a teenager, or if is_weekend or is_holiday for a day off.\n\nYour comparison toolkit: > and < for order, >= and <= for or-equal, == for is it equal, and != for is it NOT equal.\n\nOne shortcut worth knowing: in a condition, an empty string, an empty list, and the number 0 all count as False, while anything with real content counts as True. So if name: is a quick way to ask does name actually have something in it. That trick is called truthiness."
+        },
+        {
+          "id": "m04-l3-s2",
+          "kind": "mcq",
+          "conceptTags": ["boolean-operators", "comparison"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "You want to greet someone only if they are a teenager: ages 13 to 19, inclusive. Which single condition is correct?",
+          "choices": [
+            "age >= 13 and age <= 19",
+            "age >= 13 or age <= 19",
+            "age >= 13 and age >= 19",
+            "age > 13 and age < 19"
+          ],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m04-l3",
+            "prompt": "Correct condition for age 13 to 19 inclusive?",
+            "expected": "age >= 13 and age <= 19 (both sides must be true, and inclusive means >= and <=)."
+          }
+        },
+        {
+          "id": "m04-l3-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["boolean-operators"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "It is raining and you have no umbrella. Work through the and plus not. What prints?",
+          "code": "raining = True\nhave_umbrella = False\nif raining and not have_umbrella:\n    print(\"Stay in\")\nelse:\n    print(\"Go out\")",
+          "expected": "Stay in",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m04-l3",
+            "prompt": "raining is True, have_umbrella is False. What prints?",
+            "code": "raining = True\nhave_umbrella = False\nif raining and not have_umbrella:\n    print(\"Stay in\")\nelse:\n    print(\"Go out\")",
+            "expected": "Stay in"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m04-l4",
+      "title": "Fix the Logic, Build a Grader",
+      "steps": [
+        {
+          "id": "m04-l4-s1",
+          "kind": "fixBug",
+          "conceptTags": ["elif", "comparison"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This never returns negative. It does not crash, which makes it sneakier than a traceback. Trace it with n = -3: the first check fails, then the elif checks the SAME thing again, so it falls through to zero. Fix the second condition so negatives work.",
+          "starterCode": "def sign(n):\n    if n > 0:\n        return \"positive\"\n    elif n > 0:\n        return \"negative\"\n    else:\n        return \"zero\"",
+          "hiddenTests": [
+            { "id": "m04-l4-s1-t1", "code": "assert sign(5) == \"positive\"", "message": "sign(5) should be positive" },
+            { "id": "m04-l4-s1-t2", "code": "assert sign(-3) == \"negative\"", "message": "sign(-3) should be negative, so the second condition needs to test for less than zero" },
+            { "id": "m04-l4-s1-t3", "code": "assert sign(0) == \"zero\"", "message": "sign(0) should be zero" }
+          ],
+          "hints": [
+            "Read the two conditions out loud. They are identical: n > 0 twice.",
+            "A negative number is not greater than 0, so it slips past both and lands on zero.",
+            "The second condition should be elif n < 0."
+          ],
+          "modelSolution": "def sign(n):\n    if n > 0:\n        return \"positive\"\n    elif n < 0:\n        return \"negative\"\n    else:\n        return \"zero\"",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m04-l4",
+            "prompt": "This never returns negative. Fix the duplicated condition.",
+            "starterCode": "def sign(n):\n    if n > 0:\n        return \"positive\"\n    elif n > 0:\n        return \"negative\"\n    else:\n        return \"zero\"",
+            "hiddenTests": [
+              { "id": "m04-l4-s1-rt1", "code": "assert sign(-3) == \"negative\"", "message": "the second condition should be n < 0" }
+            ],
+            "hints": ["elif n < 0:"]
+          }
+        },
+        {
+          "id": "m04-l4-s2",
+          "kind": "writeStub",
+          "conceptTags": ["if", "elif", "else"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Write letter_grade so it turns a number score into a letter, using an if/elif/else chain. The bands: 90 and up is A, 80 to 89 is B, 70 to 79 is C, 60 to 69 is D, and below 60 is F. Remember to put the highest band first so it wins before the lower checks.",
+          "starterCode": "def letter_grade(score):\n    # return \"A\", \"B\", \"C\", \"D\", or \"F\" based on the bands above\n    pass",
+          "hiddenTests": [
+            { "id": "m04-l4-s2-t1", "code": "assert letter_grade(95) == \"A\"", "message": "95 should be an A" },
+            { "id": "m04-l4-s2-t2", "code": "assert letter_grade(90) == \"A\"", "message": "check the boundary: exactly 90 should still be an A (use >= 90)" },
+            { "id": "m04-l4-s2-t3", "code": "assert letter_grade(83) == \"B\"", "message": "83 should be a B" },
+            { "id": "m04-l4-s2-t4", "code": "assert letter_grade(71) == \"C\"", "message": "71 should be a C" },
+            { "id": "m04-l4-s2-t5", "code": "assert letter_grade(60) == \"D\"", "message": "check the boundary: exactly 60 should be a D" },
+            { "id": "m04-l4-s2-t6", "code": "assert letter_grade(40) == \"F\"", "message": "40 should be an F" }
+          ],
+          "hints": [
+            "Start with the highest band: if score >= 90: return \"A\".",
+            "Each lower band is an elif with a smaller number: elif score >= 80: return \"B\", and so on.",
+            "The final else covers everything below 60: return \"F\"."
+          ],
+          "modelSolution": "def letter_grade(score):\n    if score >= 90:\n        return \"A\"\n    elif score >= 80:\n        return \"B\"\n    elif score >= 70:\n        return \"C\"\n    elif score >= 60:\n        return \"D\"\n    else:\n        return \"F\"",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m04-l4",
+            "prompt": "In a grade chain, why must the 90-and-up check come before the 80-and-up check?",
+            "expected": "Python runs the first true branch and skips the rest, so a 95 would wrongly match >= 80 first if that came earlier. Highest band first."
+          }
+        },
+        {
+          "id": "m04-l4-s3",
+          "kind": "reflection",
+          "conceptTags": ["elif"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck: explain in plain words why the ORDER of elif branches matters. Use the grade example if it helps: what would go wrong if you checked score >= 60 before score >= 90?"
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m04-boss",
+    "name": "The Locked Room",
+    "taunt": "One door, one choice. Your fate depends on what you are carrying.",
+    "brief": "Your first taste of game logic. A hero stands in a dark room. What happens next depends on the situation, and you write the rules.\n\nWrite room_result(has_key, health) that returns exactly one of three outcomes, in this priority order:\n1. If has_key is True, return: You unlock the door and escape.\n2. Otherwise, if health is 0 or below, return: You collapse in the dark.\n3. Otherwise, return: The door is locked. You search the room.\n\nThe order is the whole puzzle: a hero with the key escapes even at 0 health, because the key check comes first. This is if, elif, and else doing real work, with a boolean and a comparison side by side.\n\ndef room_result(has_key, health):",
+    "emblem": "m04-boss.svg",
+    "hiddenTests": [
+      { "id": "m04-boss-t1", "code": "assert room_result(True, 10) == \"You unlock the door and escape.\"", "message": "with the key and healthy, the hero should escape" },
+      { "id": "m04-boss-t2", "code": "assert room_result(True, 0) == \"You unlock the door and escape.\"", "message": "the key check must come FIRST: with the key, the hero escapes even at 0 health" },
+      { "id": "m04-boss-t3", "code": "assert room_result(False, 0) == \"You collapse in the dark.\"", "message": "no key and 0 health should collapse (0 counts as at or below zero)" },
+      { "id": "m04-boss-t4", "code": "assert room_result(False, -5) == \"You collapse in the dark.\"", "message": "no key and negative health should also collapse" },
+      { "id": "m04-boss-t5", "code": "assert room_result(False, 5) == \"The door is locked. You search the room.\"", "message": "no key but still alive should land on the last branch: the door is locked" }
+    ],
+    "modelSolution": "def room_result(has_key, health):\n    if has_key:\n        return \"You unlock the door and escape.\"\n    elif health <= 0:\n        return \"You collapse in the dark.\"\n    else:\n        return \"The door is locked. You search the room.\"",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m04-t1", "term": "if statement", "definition": "Runs a block of code only when a condition is true. The word if, a yes-or-no question, a colon, then the indented block that belongs to it.", "kind": "concept", "strand": "core", "sourceModuleId": "m04", "sourceLessonId": "m04-l1" },
+    { "id": "m04-t2", "term": "else", "definition": "The catch-all path. Its indented block runs only when the if condition was false.", "kind": "concept", "strand": "core", "sourceModuleId": "m04", "sourceLessonId": "m04-l2" },
+    { "id": "m04-t3", "term": "elif", "definition": "Short for else-if. Adds another question to the chain. Python checks top to bottom and runs the first true branch, then skips the rest.", "kind": "concept", "strand": "core", "sourceModuleId": "m04", "sourceLessonId": "m04-l2" },
+    { "id": "m04-t4", "term": "and / or / not", "definition": "The glue for conditions. and needs both sides true, or needs either side true, not flips true and false.", "kind": "concept", "strand": "core", "sourceModuleId": "m04", "sourceLessonId": "m04-l3" },
+    { "id": "m04-t5", "term": "truthiness", "definition": "In a condition, an empty string, an empty list, and 0 count as False, while anything with real content counts as True. So if name: asks does name have anything in it.", "kind": "concept", "strand": "core", "sourceModuleId": "m04", "sourceLessonId": "m04-l3" }
+  ]
+}

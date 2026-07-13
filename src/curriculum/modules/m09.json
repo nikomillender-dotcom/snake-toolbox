@@ -1,0 +1,314 @@
+{
+  "id": "m09",
+  "title": "Dictionaries, Tuples, Sets",
+  "phase": 1,
+  "strands": ["core", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["dict", "tuple", "set", "keyerror", "membership", "dedup"],
+  "lessons": [
+    {
+      "id": "m09-l1",
+      "title": "Dictionaries: Labels, Not Positions",
+      "steps": [
+        {
+          "id": "m09-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Welcome back. A list finds things by POSITION. A dictionary finds them by a LABEL you choose, called a key. Think of an actual dictionary: you look up a word (the key) to get its definition (the value). Or a contacts app: look up a name to get a number.\n\nYou write one with curly braces and key: value pairs: ages = {\"niko\": 30, \"sam\": 25}. You look up a value by its key in square brackets: ages[\"niko\"] gives 30. Keys are usually strings, values can be anything.\n\nHere is the mental test that tells you when to use one: if your data is a bunch of labeled facts (this name has this age, this item has this price) rather than an ordered line, a dict is almost always the right container. It is the workhorse of real Python."
+        },
+        {
+          "id": "m09-l1-s2",
+          "kind": "liveExample",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Look up by key, and count the entries.",
+          "code": "ages = {\"niko\": 30, \"sam\": 25}\nprint(ages[\"niko\"])\nprint(len(ages))"
+        },
+        {
+          "id": "m09-l1-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Look up the value stored under the key \"tea\". What prints?",
+          "code": "prices = {\"coffee\": 3, \"tea\": 2}\nprint(prices[\"tea\"])",
+          "expected": "2",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m09-l1",
+            "prompt": "prices = {\"coffee\": 3, \"tea\": 2}. What is prices[\"tea\"]?",
+            "code": "prices = {\"coffee\": 3, \"tea\": 2}\nprint(prices[\"tea\"])",
+            "expected": "2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m09-l2",
+      "title": "Working with Dicts",
+      "steps": [
+        {
+          "id": "m09-l2-s1",
+          "kind": "prose",
+          "conceptTags": ["dict", "keyerror", "membership"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "You add or update by assigning to a key: ages[\"kim\"] = 40 creates that entry, or overwrites it if kim is already there. To check whether a key exists, use in: \"niko\" in ages is True.\n\nNow the trap: looking up a key that does not exist raises a KeyError, one of the errors from Module 3. Two safe moves. Check first with in, or, cleaner, use .get(). ages.get(\"kim\") returns None instead of crashing when kim is missing, and ages.get(\"kim\", 0) returns a fallback of 0. That fallback is the secret behind the counting pattern coming next.\n\nLooping over a dict walks its KEYS: for name in ages: hands you each key, and ages[name] gives its value."
+        },
+        {
+          "id": "m09-l2-s2",
+          "kind": "liveExample",
+          "conceptTags": ["dict", "membership"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. Add an entry, check membership, use a safe get, and loop the keys.",
+          "code": "ages = {\"niko\": 30}\nages[\"sam\"] = 25\nprint(\"sam\" in ages)\nprint(ages.get(\"kim\", 0))\nfor name in ages:\n    print(name, ages[name])"
+        },
+        {
+          "id": "m09-l2-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "The key \"b\" is not in the dict, but .get with a fallback does not crash. What prints?",
+          "code": "scores = {\"a\": 10}\nprint(scores.get(\"b\", 0))",
+          "expected": "0",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m09-l2",
+            "prompt": "scores = {\"a\": 10}. What does scores.get(\"b\", 0) return?",
+            "code": "scores = {\"a\": 10}\nprint(scores.get(\"b\", 0))",
+            "expected": "0"
+          }
+        },
+        {
+          "id": "m09-l2-s4",
+          "kind": "fixBug",
+          "conceptTags": ["keyerror", "dict"],
+          "strand": "debug",
+          "statTags": ["DEBUG"],
+          "prompt": "This crashes with a KeyError whenever the item is not on the menu. It should instead return 0 for anything missing. Swap the crashing square-bracket lookup for the safe one.",
+          "starterCode": "def price_of(menu, item):\n    # menu is a dict of item -> price; return the price, or 0 if not on the menu\n    return menu[item]",
+          "hiddenTests": [
+            { "id": "m09-l2-s4-t1", "code": "assert price_of({\"tea\": 2, \"cake\": 5}, \"tea\") == 2", "message": "an item that exists should return its price: tea is 2" },
+            { "id": "m09-l2-s4-t2", "code": "assert price_of({\"tea\": 2}, \"cake\") == 0", "message": "check what happens when the item is missing: it should return 0, not raise a KeyError" },
+            { "id": "m09-l2-s4-t3", "code": "assert price_of({}, \"anything\") == 0", "message": "an empty menu should return 0 for any item" }
+          ],
+          "hints": [
+            "menu[item] raises KeyError the moment item is not a key.",
+            "The safe lookup with a fallback is .get(key, fallback).",
+            "return menu.get(item, 0)"
+          ],
+          "modelSolution": "def price_of(menu, item):\n    return menu.get(item, 0)",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "fixBug",
+            "sourceLessonId": "m09-l2",
+            "prompt": "This raises KeyError for missing items. Make it return 0 instead.",
+            "starterCode": "def price_of(menu, item):\n    return menu[item]",
+            "hiddenTests": [
+              { "id": "m09-l2-s4-rt1", "code": "assert price_of({\"tea\": 2}, \"cake\") == 0", "message": "use menu.get(item, 0)" }
+            ],
+            "hints": ["return menu.get(item, 0)"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "m09-l3",
+      "title": "Counting with Dicts",
+      "steps": [
+        {
+          "id": "m09-l3-s1",
+          "kind": "prose",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "One dict pattern is so common it earns its own lesson: counting. You want to tally how many times each thing shows up. Start with an empty dict, then for each item, bump its count by one.\n\nThe clean version uses that get fallback: counts[item] = counts.get(item, 0) + 1. Read it left to right: take the current count for this item (or 0 if we have never seen it), add one, and store it back under the same key. Run that loop over a list of words and you have a word-frequency counter, which happens to be exactly your boss for this module."
+        },
+        {
+          "id": "m09-l3-s2",
+          "kind": "liveExample",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. The get-fallback trick tallies each vote.",
+          "code": "votes = [\"yes\", \"no\", \"yes\", \"yes\"]\ncounts = {}\nfor v in votes:\n    counts[v] = counts.get(v, 0) + 1\nprint(counts)"
+        },
+        {
+          "id": "m09-l3-s3",
+          "kind": "parsons",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Drag these into order to build a counter: start with an empty dict, walk the items, bump each item's count, then print. Mind the indentation (the bump line lives inside the loop).",
+          "scrambled": ["    counts[item] = counts.get(item, 0) + 1", "counts = {}", "for item in items:", "print(counts)"],
+          "solutionOrder": [1, 2, 0, 3],
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m09-l3",
+            "prompt": "What is the one line at the heart of the dict counting pattern?",
+            "expected": "counts[item] = counts.get(item, 0) + 1 (take the current count or 0, add one, store it back)."
+          }
+        },
+        {
+          "id": "m09-l3-s4",
+          "kind": "traceTable",
+          "conceptTags": ["dict"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Trace the counter over the letters of \"aab\": a is seen, then a again, then b. Dicts keep keys in the order they were first added. What prints exactly?",
+          "code": "counts = {}\nfor c in \"aab\":\n    counts[c] = counts.get(c, 0) + 1\nprint(counts)",
+          "expected": "{'a': 2, 'b': 1}",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m09-l3",
+            "prompt": "Count the letters of \"aab\". What dict prints?",
+            "code": "counts = {}\nfor c in \"aab\":\n    counts[c] = counts.get(c, 0) + 1\nprint(counts)",
+            "expected": "{'a': 2, 'b': 1}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "m09-l4",
+      "title": "Tuples and Sets",
+      "steps": [
+        {
+          "id": "m09-l4-s1",
+          "kind": "prose",
+          "conceptTags": ["tuple", "set", "dedup"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Two more containers, each for a specific job.\n\nA tuple is like a list but IMMUTABLE: once made, it cannot change. You write it with parentheses: point = (3, 4). Reach for a tuple when you have a small fixed record that should stay put, like a coordinate (x, y) or an RGB color. The immutability is the point: it says these values belong together and will not be edited.\n\nA set is an unordered collection of UNIQUE items, written with curly braces: tags = {\"python\", \"games\"}. Two superpowers: it automatically drops duplicates, and checking whether something is in a set is very fast. Turn a list into a set to instantly dedupe it, and len(set(words)) counts the distinct items.\n\nThe quick guide: dict for labeled lookups, list for an ordered sequence you will edit, tuple for a fixed record, set for uniqueness and fast membership."
+        },
+        {
+          "id": "m09-l4-s2",
+          "kind": "liveExample",
+          "conceptTags": ["tuple", "set", "dedup"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Run this. A tuple you can read but not change, and a set that drops the duplicate.",
+          "code": "point = (3, 4)\nprint(point[0])\ntags = {\"python\", \"games\", \"python\"}\nprint(len(tags))\nprint(set([1, 1, 2, 3, 3]))"
+        },
+        {
+          "id": "m09-l4-s3",
+          "kind": "predictOutput",
+          "conceptTags": ["set", "dedup"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Turning a list into a set drops the duplicates, and len counts what is left. How many DISTINCT numbers are there?",
+          "code": "nums = [1, 2, 2, 3, 3, 3]\nprint(len(set(nums)))",
+          "expected": "3",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "predictOutput",
+            "sourceLessonId": "m09-l4",
+            "prompt": "len(set([1, 2, 2, 3, 3, 3])). What prints?",
+            "code": "nums = [1, 2, 2, 3, 3, 3]\nprint(len(set(nums)))",
+            "expected": "3"
+          }
+        },
+        {
+          "id": "m09-l4-s4",
+          "kind": "mcq",
+          "conceptTags": ["tuple"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "You are storing a fixed pair of numbers, a latitude and a longitude, that should never change once set. Which container fits best?",
+          "choices": ["a tuple", "a list", "a dict", "a set"],
+          "answerIndex": 0,
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m09-l4",
+            "prompt": "A fixed pair of values that should never change: which container?",
+            "expected": "A tuple. It is immutable, so it signals a fixed record that will not be edited."
+          }
+        }
+      ]
+    },
+    {
+      "id": "m09-l5",
+      "title": "Build: The Right Container for the Job",
+      "steps": [
+        {
+          "id": "m09-l5-s1",
+          "kind": "prose",
+          "conceptTags": ["set", "dedup"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "Choosing the right container is half of writing clean code. When the question is are there any repeats, a set answers it in one line, because a set cannot hold duplicates. If the list and its set version are different lengths, something got dropped, which means there was a duplicate. Let us use that."
+        },
+        {
+          "id": "m09-l5-s2",
+          "kind": "writeStub",
+          "conceptTags": ["set", "dedup"],
+          "strand": "core",
+          "statTags": ["SYNTAX"],
+          "prompt": "Write has_duplicates(items) that returns True if the list has any repeated value, and False if every item is unique. The clean trick: compare the length of the list to the length of its set (a set drops duplicates, so if they differ, there was a repeat).",
+          "starterCode": "def has_duplicates(items):\n    # True if any value repeats, False if all are unique\n    pass",
+          "hiddenTests": [
+            { "id": "m09-l5-s2-t1", "code": "assert has_duplicates([1, 2, 2]) == True", "message": "the 2 repeats, so this should be True" },
+            { "id": "m09-l5-s2-t2", "code": "assert has_duplicates([1, 2, 3]) == False", "message": "all unique, so this should be False" },
+            { "id": "m09-l5-s2-t3", "code": "assert has_duplicates([]) == False", "message": "an empty list has no duplicates, so False" },
+            { "id": "m09-l5-s2-t4", "code": "assert has_duplicates([\"a\", \"a\"]) == True", "message": "it should work for text too: two a's means a duplicate" }
+          ],
+          "hints": [
+            "set(items) drops any duplicates.",
+            "If duplicates were dropped, the set is shorter than the list.",
+            "return len(set(items)) != len(items)"
+          ],
+          "modelSolution": "def has_duplicates(items):\n    return len(set(items)) != len(items)",
+          "reviewable": true,
+          "reviewForm": {
+            "kind": "recall",
+            "sourceLessonId": "m09-l5",
+            "prompt": "How can a set tell you in one line whether a list has duplicates?",
+            "expected": "Compare len(set(items)) to len(items). If the set is shorter, a duplicate was dropped."
+          }
+        },
+        {
+          "id": "m09-l5-s3",
+          "kind": "reflection",
+          "conceptTags": ["dict", "set", "tuple"],
+          "strand": "core",
+          "reviewable": false,
+          "prompt": "Teach it back to the rubber duck: you now have four containers (list, dict, tuple, set). In a sentence each, when would you reach for a dict versus a list? And what is the one job a set does better than anything else?"
+        }
+      ]
+    }
+  ],
+  "boss": {
+    "id": "m09-boss",
+    "name": "The Tally Keeper",
+    "taunt": "A wall of words. Count them, and tell me how many are truly different.",
+    "brief": "The classic exercise that proves you can pick the right container: word frequencies. You get a block of text and you build two tools, each using a DIFFERENT container.\n\n1. word_count(text): return a DICTIONARY mapping each word to how many times it appears. Lowercase the text and split it into words, then use the counting pattern. A dict is the right container because you are storing labeled counts.\n   Example: word_count(\"the cat the dog the\") returns {\"the\": 3, \"cat\": 1, \"dog\": 1}.\n\n2. unique_words(text): return how many DISTINCT words the text has, as a number. A set is the right container because you only care about uniqueness.\n   Example: unique_words(\"the cat the dog\") returns 3.\n\nBoth should lowercase first, so The and the count as the same word, and both should return the empty answer for empty text.",
+    "emblem": "m09-boss.svg",
+    "hiddenTests": [
+      { "id": "m09-boss-t1", "code": "assert word_count(\"the cat the dog the\") == {\"the\": 3, \"cat\": 1, \"dog\": 1}", "message": "count each word: the appears 3 times, cat and dog once each" },
+      { "id": "m09-boss-t2", "code": "assert word_count(\"\") == {}", "message": "empty text should give an empty dict" },
+      { "id": "m09-boss-t3", "code": "assert word_count(\"Hi hi HI\") == {\"hi\": 3}", "message": "lowercase first so Hi, hi, and HI all count as the same word: hi appears 3 times" },
+      { "id": "m09-boss-t4", "code": "assert unique_words(\"the cat the dog\") == 3", "message": "the distinct words are the, cat, dog, so 3" },
+      { "id": "m09-boss-t5", "code": "assert unique_words(\"\") == 0", "message": "empty text has 0 distinct words" },
+      { "id": "m09-boss-t6", "code": "assert unique_words(\"hi HI Hi\") == 1", "message": "lowercased, these are all the same word, so just 1 distinct word" }
+    ],
+    "modelSolution": "def word_count(text):\n    counts = {}\n    for word in text.lower().split():\n        counts[word] = counts.get(word, 0) + 1\n    return counts\n\ndef unique_words(text):\n    return len(set(text.lower().split()))",
+    "isPillar": false
+  },
+  "terms": [
+    { "id": "m09-t1", "term": "dictionary (dict)", "definition": "A container that maps keys to values: {\"niko\": 30}. Look things up by a label you choose, not by position. The workhorse for labeled data.", "kind": "concept", "strand": "core", "sourceModuleId": "m09", "sourceLessonId": "m09-l1" },
+    { "id": "m09-t2", "term": "KeyError", "definition": "Raised when you look up a dict key that does not exist. Avoid it by checking with in first, or by using .get(key, fallback).", "kind": "concept", "strand": "core", "sourceModuleId": "m09", "sourceLessonId": "m09-l2" },
+    { "id": "m09-t3", "term": ".get()", "definition": "A safe dict lookup. d.get(key) returns None if the key is missing instead of crashing; d.get(key, 0) returns a fallback you choose. The heart of the counting pattern.", "kind": "function", "strand": "core", "sourceModuleId": "m09", "sourceLessonId": "m09-l2" },
+    { "id": "m09-t4", "term": "tuple", "definition": "Like a list but immutable: once made, it cannot change. Written with parentheses: (3, 4). Use it for a fixed little record like a coordinate.", "kind": "concept", "strand": "core", "sourceModuleId": "m09", "sourceLessonId": "m09-l4" },
+    { "id": "m09-t5", "term": "set", "definition": "An unordered collection of unique items, written with curly braces. Automatically drops duplicates and checks membership fast. set([1, 1, 2]) is {1, 2}.", "kind": "concept", "strand": "core", "sourceModuleId": "m09", "sourceLessonId": "m09-l4" },
+    { "id": "m09-t6", "term": "counting pattern", "definition": "Tally occurrences with a dict: counts[item] = counts.get(item, 0) + 1, run inside a loop. Turns a list of things into a count of each.", "kind": "phrase", "strand": "core", "sourceModuleId": "m09", "sourceLessonId": "m09-l3" }
+  ]
+}

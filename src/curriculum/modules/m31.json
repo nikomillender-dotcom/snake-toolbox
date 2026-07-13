@@ -1,0 +1,25 @@
+{
+  "id": "m31",
+  "title": "Reading Real Code",
+  "phase": 4,
+  "strands": ["read", "design", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["specimen-decode", "descriptors", "metaclasses-read-level", "library-navigation", "audit", "ai-code-review"],
+  "lessons": [
+    {
+      "id": "m31-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m31-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["specimen-decode"],
+          "strand": "read",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. This is the code-reading capstone and your standout goal: navigate code you did not write, and audit and correct your AI team's code with confidence. You will decode specimens that climb in difficulty and are shaped like your own repos (a file-reader/watcher loop like War Room, a swappable storage adapter like Throughline, a content engine like the SweetTeaPub workbook engine, a game-state loop like Meow Rush), then find and correct a planted bug in an AI-written specimen. Descriptors and metaclasses are taught at READ level only. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

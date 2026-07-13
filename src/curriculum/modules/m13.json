@@ -1,0 +1,25 @@
+{
+  "id": "m13",
+  "title": "Functions II",
+  "phase": 2,
+  "strands": ["core", "design", "debug"],
+  "producesArtifact": false,
+  "conceptTags": ["comprehensions", "lambda", "map", "filter", "unpacking", "args", "kwargs", "recursion-taste"],
+  "lessons": [
+    {
+      "id": "m13-l1",
+      "title": "Coming Soon",
+      "steps": [
+        {
+          "id": "m13-l1-s1",
+          "kind": "prose",
+          "conceptTags": ["comprehensions"],
+          "strand": "core",
+          "reviewable": false,
+          "body": "PLACEHOLDER: this chapter is still being written, and Snake ToolBox is not going to pretend otherwise. Here is where you will write expressive, flexible functions (comprehensions, lambdas, map and filter, unpacking, and *args and **kwargs), plus one gentle enrichment taste of thinking recursively. The full version is on the way. For now this page is an honest signpost of where the road goes next, not the lesson itself."
+        }
+      ]
+    }
+  ],
+  "terms": []
+}

@@ -1,0 +1,139 @@
+{
+  "version": "1.0.0",
+  "statMax": { "SYNTAX": 100, "DEBUG": 100, "TESTS": 100, "READ": 100, "DESIGN": 100, "SHIP": 100 },
+  "byKind": {
+    "mcq": { "SYNTAX": 1 },
+    "fillBlank": { "SYNTAX": 1 },
+    "predictOutput": { "SYNTAX": 1 },
+    "parsons": { "SYNTAX": 1 },
+    "traceTable": { "SYNTAX": 1 },
+    "writeStub": { "SYNTAX": 2 },
+    "fixBug": { "DEBUG": 2 },
+    "specimenDecode": { "READ": 2 }
+  },
+  "byStrand": {
+    "core": { "SYNTAX": 1 },
+    "debug": { "DEBUG": 2 },
+    "tests": { "TESTS": 2 },
+    "read": { "READ": 2 },
+    "design": { "DESIGN": 2 },
+    "ship": { "SHIP": 1 },
+    "stdlib": { "SYNTAX": 1 },
+    "errors": { "DEBUG": 1 },
+    "review": { "SYNTAX": 1 }
+  },
+  "modulePrimary": {
+    "m01": { "stat": "SYNTAX", "bump": 4 },
+    "m02": { "stat": "SYNTAX", "bump": 4 },
+    "m03": { "stat": "DEBUG", "bump": 4 },
+    "m04": { "stat": "SYNTAX", "bump": 4 },
+    "m05": { "stat": "SYNTAX", "bump": 4 },
+    "m06": { "stat": "SYNTAX", "bump": 4 },
+    "m07": { "stat": "SYNTAX", "bump": 4 },
+    "m08": { "stat": "SYNTAX", "bump": 4 },
+    "m09": { "stat": "SYNTAX", "bump": 4 },
+    "m10": { "stat": "SHIP", "bump": 4 },
+    "m11": { "stat": "SYNTAX", "bump": 4 },
+    "m12": { "stat": "DEBUG", "bump": 4 },
+    "m13": { "stat": "SYNTAX", "bump": 4 },
+    "m14": { "stat": "DESIGN", "bump": 4 },
+    "m15": { "stat": "DESIGN", "bump": 4 },
+    "m16": { "stat": "DESIGN", "bump": 4 },
+    "m17": { "stat": "SYNTAX", "bump": 4 },
+    "m18": { "stat": "DESIGN", "bump": 4 },
+    "m19": { "stat": "DEBUG", "bump": 4 },
+    "m20": { "stat": "TESTS", "bump": 4 },
+    "m21": { "stat": "DESIGN", "bump": 4 },
+    "m22": { "stat": "DESIGN", "bump": 4 },
+    "m23": { "stat": "SYNTAX", "bump": 4 },
+    "m24": { "stat": "DESIGN", "bump": 4 },
+    "m25": { "stat": "DESIGN", "bump": 4 },
+    "m26": { "stat": "DESIGN", "bump": 4 },
+    "m27": { "stat": "SYNTAX", "bump": 4 },
+    "m28": { "stat": "DESIGN", "bump": 4 },
+    "m29": { "stat": "DEBUG", "bump": 4 },
+    "m30": { "stat": "SHIP", "bump": 4 },
+    "m31": { "stat": "READ", "bump": 4 },
+    "m32": { "stat": "SHIP", "bump": 4 },
+    "m33": { "stat": "SHIP", "bump": 4 }
+  },
+  "bossAward": {
+    "m01-boss": {
+      "stat": "SYNTAX",
+      "bump": 12,
+      "seal": { "id": "m01-seal", "label": "First Contact", "tier": "bronze", "moduleId": "m01", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m02-boss": {
+      "stat": "SYNTAX",
+      "bump": 12,
+      "seal": { "id": "m02-seal", "label": "Fair Share", "tier": "bronze", "moduleId": "m02", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m03-boss": {
+      "stat": "DEBUG",
+      "bump": 12,
+      "seal": { "id": "m03-seal", "label": "Bug Hunter", "tier": "bronze", "moduleId": "m03", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m04-boss": {
+      "stat": "SYNTAX",
+      "bump": 12,
+      "seal": { "id": "m04-seal", "label": "Gatekeeper", "tier": "bronze", "moduleId": "m04", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m05-boss": {
+      "stat": "SYNTAX",
+      "bump": 12,
+      "seal": { "id": "m05-seal", "label": "Lucky Streak", "tier": "bronze", "moduleId": "m05", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m06-boss": {
+      "stat": "DESIGN",
+      "bump": 14,
+      "seal": { "id": "m06-seal", "label": "The Untangler", "tier": "silver", "moduleId": "m06", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m07-boss": {
+      "stat": "SYNTAX",
+      "bump": 12,
+      "seal": { "id": "m07-seal", "label": "Data Sieve", "tier": "bronze", "moduleId": "m07", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m08-boss": {
+      "stat": "SYNTAX",
+      "bump": 12,
+      "seal": { "id": "m08-seal", "label": "Wordsmith", "tier": "bronze", "moduleId": "m08", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m09-boss": {
+      "stat": "SYNTAX",
+      "bump": 12,
+      "seal": { "id": "m09-seal", "label": "Tally Keeper", "tier": "bronze", "moduleId": "m09", "mintedAt": 0 },
+      "pillar": false
+    },
+    "m10-boss": {
+      "stat": "SHIP",
+      "bump": 16,
+      "seal": { "id": "m10-seal", "label": "First Artifact", "tier": "silver", "moduleId": "m10", "mintedAt": 0 },
+      "pillar": false
+    }
+  },
+  "shipAward": 10,
+  "titleFor": {
+    "m10": { "id": "title-pcep", "label": "PCEP Ready", "earnedAt": 0 },
+    "m20": { "id": "title-pcap", "label": "PCAP Ready", "earnedAt": 0 }
+  },
+  "classByPhase": {
+    "1": { "className": "Apprentice", "spriteTier": 1 },
+    "2": { "className": "Builder", "spriteTier": 2 },
+    "3": { "className": "Forgemaster", "spriteTier": 3 },
+    "4": { "className": "Wayfarer", "spriteTier": 4 }
+  },
+  "phaseThresholds": {
+    "1": 0,
+    "2": 10,
+    "3": 20,
+    "4": 30
+  }
+}
