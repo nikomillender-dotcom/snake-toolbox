@@ -285,32 +285,29 @@ describe("PyodideEngine: check() with input()-calling code never hangs (Manager 
     expect(outcome.passed).toBe(true);
   });
 
-  it("a REGULAR run() (not check()) on the SAME engine is still genuinely interactive: onInputRequest DOES fire, proving the EOF policy is scoped to grading only, not to input-capable engines wholesale", async () => {
-    let requestedPrompt: string | null = null;
-    const runPromise = engine.run({
-      runId: "input-run-1",
-      code: "input('name: ')",
-      mountFiles: [],
-      namespace: "scratch",
-      hooks: silentHooks({ onInputRequest: (prompt) => { requestedPrompt = prompt; } }),
-    });
-    // Give the worker a moment to reach the blocking input() call and fire onInputRequest.
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(requestedPrompt).not.toBeNull();
-    // Answer it directly via the SAB (the real handshake workerClient.ts uses), the same way a
-    // real main thread would, so this test does not itself hang: writes the length, the data,
-    // then flips status to ready and notifies, exactly matching provideInput's real B4 protocol.
-    const inputBuffer = (engine as unknown as { inputBuffer: SharedArrayBuffer }).inputBuffer;
-    const int32 = new Int32Array(inputBuffer);
-    const dataView = new Uint8Array(inputBuffer, 8);
-    const bytes = new TextEncoder().encode("Niko");
-    dataView.set(bytes);
-    Atomics.store(int32, 1, bytes.length);
-    Atomics.store(int32, 0, 1); // INPUT_STATUS_READY
-    Atomics.notify(int32, 0);
-    const outcome = await runPromise;
-    expect(outcome.ok).toBe(true);
-  }, 10000);
+  // A "regular run() is still genuinely interactive" test used to live here and does NOT: it
+  // hung the vitest worker on a real run (confirmed by isolating all 5 new tests one at a time
+  // with a hard timeout each; the other 4 above were fast and clean, only this one hung). Root
+  // cause, on inspection, is the test's own authoring, not a defect in the fix: it called
+  // `engine.run()` (unawaited) then tried to answer the SAB from the SAME synchronous JS turn via
+  // `await new Promise(setTimeout(...))`. `run()` synchronously calls `pyodide.runPython(...)`,
+  // which is itself synchronous; when the code hits `input()`, the stdin callback's polling
+  // `Atomics.wait` blocks the ONE thread this whole test process runs on, so control never
+  // returns to the event loop for that `setTimeout` callback to ever fire, so the "answer" code
+  // that was supposed to unblock it never runs. This is not a real-world scenario: in production
+  // the worker's `run()` executes on the WORKER thread, and the "answer" code (workerClient.ts's
+  // `send()`) executes on the MAIN thread, two separate OS threads, so one blocking synchronously
+  // never starves the other. This file's own header comment already documents this exact
+  // boundary: "What this suite does NOT prove: the SharedArrayBuffer + Atomics interrupt/input
+  // handshake (B4)... those require a real browser." A single-process unit test cannot correctly
+  // simulate two independent threads racing over a blocking Atomics.wait; trying to is what hung.
+  //
+  // The claim itself ("a regular run stays interactive, only check() gets EOF") IS still proven,
+  // correctly, in the one place that can actually prove it: e2e/sab-handshake.spec.ts's existing
+  // "input() round trip" test (a real browser, real separate worker/main threads, real
+  // SharedArrayBuffers) already covers this end to end and was re-run clean after this round's
+  // changes. That same file also gained a new test this round proving item 6(d): Stop while an
+  // input prompt is genuinely PENDING (not yet answered) actually stops the run.
 });
 
 describe("PyodideEngine hash verification (F7)", () => {

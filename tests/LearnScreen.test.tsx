@@ -505,3 +505,140 @@ describe("G17: strand carried verbatim on emission, dedupe on re-pass (App-level
     expect(matches).toHaveLength(1); // CONTRACT 5: deduped by nodeId, never a double-count
   });
 });
+
+// Manager fix round, item 2: the liveExample prompt (the teaching sentence) never rendered, only
+// its code block and Run button did.
+describe("liveExample prompt renders (Manager fix round, item 2)", () => {
+  it("m01-l1-s2's liveExample prompt is visible alongside its code block, not just the code", async () => {
+    renderReal("m01-l1", "m01-l1-s2");
+    expect(await screen.findByText("Hit Run. Watch the console show your words.")).toBeInTheDocument();
+    expect(screen.getByText('print("Hello, world.")')).toBeInTheDocument(); // the code block, unaffected
+  });
+
+  it("m01-l2-s2's liveExample prompt also renders (a second real step, not a one-off)", async () => {
+    renderReal("m01-l2", "m01-l2-s2");
+    expect(await screen.findByText(/The first line starts with #, which makes it a comment/)).toBeInTheDocument();
+  });
+});
+
+// Manager fix round, item 5: onTryItRun used to be a hardcoded `async () => "hey"` stub (a literal
+// leftover), so a liveExample's "try it" Run silently returned that string instead of executing
+// anything. This proves the WIRING reaches the real worker client with the right shape (isolated
+// graded namespace, per the Manager's own brief, never the persistent scratch one); the mock
+// worker here is a scripted stand-in, not real Python, so the actual EXECUTION correctness (real
+// stdout for real code, including the one real input()-calling liveExample) is proven live against
+// real Pyodide in e2e/check-input-deadlock.spec.ts, the same split this suite already uses
+// elsewhere (e.g. the CONTRACT-1 "check" message-shape test above).
+describe("liveExample \"try it\" reaches the real worker client (Manager fix round, item 5)", () => {
+  it("clicking Run sends a real 'run' message (graded/isolated namespace, the step's own code) and the response reaches the box, never the 'hey' stub", async () => {
+    const { worker } = renderReal("m01-l1", "m01-l1-s2");
+    const sent: unknown[] = [];
+    const originalSend = worker.send.bind(worker);
+    worker.send = (msg) => { sent.push(msg); originalSend(msg); };
+
+    // Scoped to the try-it card: the work pane ALSO renders its own (separate, empty-starterCode)
+    // Run button for a liveExample step (route "none" shows the editor bezel unconditionally, a
+    // pre-existing characteristic, not something this round changes), so an unscoped query is
+    // ambiguous between the two real buttons.
+    const runBtn = document.querySelector(".pane.teacher .card")!.querySelector("button.btn-primary") as HTMLButtonElement;
+    fireEvent.click(runBtn);
+
+    await waitFor(() => expect(sent.some((m) => (m as { t: string }).t === "run")).toBe(true));
+    const runMsg = sent.find((m) => (m as { t: string }).t === "run") as { namespace: string; code: string };
+    expect(runMsg.namespace).toBe("graded"); // isolated, never the persistent scratch namespace
+    expect(runMsg.code).toBe('print("Hello, world.")'); // the liveExample's OWN code, not the editor's
+
+    // The mock worker (a scripted stand-in, not real Python) always echoes "3.5\n" for code that
+    // does not match one of its special markers; the point here is that SOME real response from
+    // the worker reaches the box, never the literal stub string "hey".
+    await waitFor(() => expect(screen.getByText("3.5")).toBeInTheDocument());
+    expect(screen.queryByText("hey")).not.toBeInTheDocument();
+  });
+
+  it("Run is disabled while a try-it run is in flight (honest running state), never queuing a second overlapping run", async () => {
+    renderReal("m01-l1", "m01-l1-s2", { worker: createMockWorkerClient({ delayMs: 30 }) });
+    const runBtn = document.querySelector(".pane.teacher .card")!.querySelector("button.btn-primary") as HTMLButtonElement;
+    fireEvent.click(runBtn);
+    expect(runBtn).toBeDisabled();
+    expect(runBtn.textContent).toMatch(/Running/);
+    await waitFor(() => expect(runBtn).not.toBeDisabled());
+  });
+});
+
+// Manager fix round, item 1: the portrait-segmented layout used to leak the scratch REPL's label
+// ("SCRATCH REPL...") while its editor/Run/output were genuinely unreachable (a native <details>
+// closed by default, with zero visible disclosure affordance, entirely outside the lesson/code/
+// output segment system). jsdom stubs matchMedia to always report `matches: false` (tests/setup.ts),
+// so the REAL auto-detection this round added (LearnScreen.tsx's detectNarrowViewport, a genuine
+// viewport check) cannot be exercised here; that half is proven live instead, against a real iPad
+// Pro 11 device profile, in e2e/portrait-viewport.spec.ts. This suite drives the SAME manual
+// override checkbox the component has always exposed, to prove the segment-reachability logic
+// itself: every surface a step offers must be reachable via ITS OWN segment tab, and nothing is
+// ever visible-labeled-but-hidden.
+describe("portrait segmentation: every surface reachable via its own segment (Manager fix round, item 1)", () => {
+  function enablePortrait() {
+    fireEvent.click(screen.getByRole("checkbox", { name: /portrait/i }));
+  }
+
+  it("in portrait, the 4 segment tabs (Lesson, Code, Output, Scratch) all exist, defaulting to Lesson", async () => {
+    renderReal("m01-l4", "m01-l4-s5"); // fixBug: hiddenTest route, has a real graded editor
+    await screen.findByLabelText("Graded lesson code editor");
+    enablePortrait();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["Lesson", "Code", "Output", "Scratch"]);
+    expect(screen.getByRole("tab", { name: "Lesson" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("Lesson segment: the teaching pane is reachable; the graded editor and scratch editor are NOT in the DOM at all (never label-visible-but-control-hidden)", async () => {
+    renderReal("m01-l4", "m01-l4-s5");
+    await screen.findByLabelText("Graded lesson code editor");
+    enablePortrait();
+    // Still in the Lesson segment (the default): the step's real prompt/instructions are visible...
+    expect(screen.getByText(/This box, total\(\), wants to add 10/)).toBeInTheDocument();
+    // ...and neither editor exists in the DOM (not merely hidden) while a different segment is
+    // showing, since LearnScreen.tsx gates the whole work pane AND the scratch pane on `segment`.
+    expect(screen.queryByLabelText("Graded lesson code editor")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Scratch REPL editor")).not.toBeInTheDocument();
+  });
+
+  it("Code segment: the graded editor becomes reachable and genuinely visible; Lesson and Scratch content are absent", async () => {
+    renderReal("m01-l4", "m01-l4-s5");
+    await screen.findByLabelText("Graded lesson code editor");
+    enablePortrait();
+    fireEvent.click(screen.getByRole("tab", { name: "Code" }));
+    const gradedEditor = await screen.findByLabelText("Graded lesson code editor");
+    expect(gradedEditor).toBeVisible();
+    expect(screen.queryByLabelText("Scratch REPL editor")).not.toBeInTheDocument();
+  });
+
+  it("Output segment: Check/Run controls and the output stream are reachable", async () => {
+    renderReal("m01-l4", "m01-l4-s5");
+    await screen.findByLabelText("Graded lesson code editor");
+    enablePortrait();
+    fireEvent.click(screen.getByRole("tab", { name: "Output" }));
+    const checkBtn = await screen.findByRole("button", { name: /^Check$/i });
+    expect(checkBtn).toBeVisible();
+    expect(screen.queryByLabelText("Graded lesson code editor")).not.toBeInTheDocument();
+  });
+
+  it("Scratch segment: THE REGRESSION NET. The scratch REPL editor and Run scratch are genuinely reachable and visible, not just present-but-hidden behind a closed <details>", async () => {
+    renderReal("m01-l4", "m01-l4-s5");
+    await screen.findByLabelText("Graded lesson code editor");
+    enablePortrait();
+    fireEvent.click(screen.getByRole("tab", { name: "Scratch" }));
+    const scratchEditor = await screen.findByLabelText("Scratch REPL editor");
+    expect(scratchEditor).toBeVisible();
+    expect(screen.getByRole("button", { name: "Run scratch" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Restart" })).toBeVisible();
+    // Genuinely a DIFFERENT segment from the graded editor's: switching here removed it entirely.
+    expect(screen.queryByLabelText("Graded lesson code editor")).not.toBeInTheDocument();
+  });
+
+  it("landscape (portrait OFF): the scratch REPL is expanded by default, not collapsed behind a closed <details> with no visible affordance", async () => {
+    renderReal("m01-l1"); // portrait defaults false; no toggle click
+    const scratchEditor = await screen.findByLabelText("Scratch REPL editor");
+    expect(scratchEditor).toBeVisible();
+    // A real, accessible toggle exists (not a bare <summary>), defaulting open (aria-expanded=true).
+    expect(screen.getByRole("button", { name: /scratch REPL/i })).toHaveAttribute("aria-expanded", "true");
+  });
+});

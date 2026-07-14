@@ -310,6 +310,44 @@ describe("WorkerProtocolEngine: namespace push vs pull (F11, P4)", () => {
     expect(events.some((e) => e.t === "namespace")).toBe(false);
   });
 
+  // Manager fix round, item 6: found while proving item 6's "app stays fully usable after"
+  // requirement against the REAL worker end to end (a real-vs-mock divergence a mocked-worker
+  // component test structurally cannot catch: mocks/workerMock.ts's scripted CONTRACT-1 double
+  // already emitted BOTH events for a check, masking that the real engine never did). LearnScreen
+  // .tsx's `running` UI state, which gates the Check button itself (RunBar.tsx's `checkIsDisabled
+  // = ... || running`), is cleared ONLY by `runDone`. Without it, Check permanently disabled
+  // itself the instant it was first used on any real hiddenTest-route step (fixBug/writeStub/
+  // boss), breaking every fail-then-fix-then-retry flow in the deployed app, not a hypothetical.
+  it("check() emits BOTH checkResult AND runDone (Manager fix round, item 6): the real worker used to emit only checkResult, permanently disabling Check's own re-enable signal after first use", async () => {
+    const { events, protocol } = harness();
+    await bootIsolated(protocol);
+    await protocol.handle({
+      t: "check",
+      runId: "cr1",
+      code: encodeOps([]),
+      mountFiles: [],
+      hiddenTests: [{ id: "t1", code: encodeOps([]), message: "trivially passes" }],
+    });
+    const checkResult = events.find((e) => e.t === "checkResult");
+    const runDone = events.find((e) => e.t === "runDone");
+    expect(checkResult).toMatchObject({ t: "checkResult", runId: "cr1" });
+    expect(runDone).toEqual({ t: "runDone", runId: "cr1", ok: true }); // ok mirrors checkResult.passed
+  });
+
+  it("check()'s runDone.ok mirrors a FAILING outcome too (not hardcoded true)", async () => {
+    const { events, protocol } = harness();
+    await bootIsolated(protocol);
+    await protocol.handle({
+      t: "check",
+      runId: "cr2",
+      code: encodeOps([]),
+      mountFiles: [],
+      hiddenTests: [{ id: "t1", code: encodeOps([{ op: "raiseError", errorType: "AssertionError", message: "boom" }]), message: "deliberately fails" }],
+    });
+    const runDone = events.find((e) => e.t === "runDone");
+    expect(runDone).toEqual({ t: "runDone", runId: "cr2", ok: false });
+  });
+
   it("a raising __repr__ is caught, never crashing the namespace snapshot (F11)", async () => {
     // FakePythonEngine's snapshot always succeeds; this exercises filterNamespace's own
     // try/except discipline directly (also covered in nameInfoFilter.test.ts) via a custom

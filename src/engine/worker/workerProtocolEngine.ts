@@ -104,8 +104,19 @@ export class WorkerProtocolEngine {
       hooks,
     });
     this.emit({ t: "checkResult", runId: msg.runId, passed: outcome.passed, results: outcome.results });
+    // Manager fix round, item 6: this real engine never emitted `runDone` for a check message, only
+    // `checkResult`. LearnScreen.tsx's `running` UI state (which gates the Check button itself, see
+    // RunBar.tsx's `checkIsDisabled = ... || running`) is only ever cleared by `runDone`, so on the
+    // REAL worker, Check permanently disabled itself the moment it was FIRST used on any hiddenTest-
+    // route step (fixBug/writeStub/boss), for the rest of that step's visit; a fail-then-fix-then-
+    // retry flow was simply broken. This escaped every existing test because
+    // mocks/workerMock.ts's scripted stand-in (deliberately built as a faithful CONTRACT-1 double)
+    // already emits BOTH events for a check, exactly the shape this brings the real engine in line
+    // with; found only by this round's new E2E driving the REAL worker end to end (a real-vs-mock
+    // divergence that a mocked-worker component test structurally cannot catch, however thorough).
     // No namespace push for check: graded state is fresh + thrown away immediately (F9), and the
     // Session Inspector only ever reflects scratch/session (B3).
+    this.emit({ t: "runDone", runId: msg.runId, ok: outcome.passed });
   }
 
   private async handleLoadPackage(name: string): Promise<void> {

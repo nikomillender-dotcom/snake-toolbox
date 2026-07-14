@@ -168,4 +168,58 @@ test.describe("SAB input/interrupt handshake (B4, real Pyodide)", () => {
       console.log("Console messages:", consoleMsgs.slice(-10).join("\n"));
     }
   });
+
+  // Manager fix round, item 6(d): "if the worker is blocked in Atomics.wait inside stdin and the
+  // user hits Stop instead of typing, does anything unblock it?" It did not: workerClient.ts's
+  // stop() handler used to wake the pending Atomics.wait by writing INPUT_STATUS_READY into the
+  // input SAB as if real data had arrived, with no actual bytes ever written, so the stdin
+  // callback resumed with STALE/garbage data instead of actually stopping anything (a real,
+  // separately-found bug, not just a missing feature). Fixed by replacing the indefinite wait
+  // with a short-timeout poll (pyodideEngine.ts's waitForStdinOrInterrupt, Pyodide's own
+  // documented pattern) that calls pyodide.checkInterrupt() on each timeout, throwing
+  // KeyboardInterrupt if Stop wrote SIGINT into the SAME interrupt buffer meanwhile. This proves
+  // it against a real browser, real separate worker/main threads, real SharedArrayBuffers, the
+  // only environment that can actually exercise this (see pyodideEngine.realpyodide.test.ts's own
+  // header comment on why a single-process unit test cannot).
+  test("Stop while an input() prompt is genuinely PENDING (never answered) actually stops the run, engine usable for the next run", async ({ page }) => {
+    const consoleMsgs: string[] = [];
+    page.on("console", (msg) => consoleMsgs.push(`[${msg.type()}] ${msg.text()}`));
+
+    await bootToSandbox(page);
+
+    await setEditorContent(page, 'name = input("your name? ")\nprint(f"hello {name}")');
+
+    await page.getByRole("button", { name: /^run$/i }).click();
+
+    // Wait for the input prompt to appear: the run is now genuinely PARKED waiting for input,
+    // exactly the state that used to be permanently unrecoverable.
+    const inputField = page.locator("#stb-input-prompt");
+    await expect(inputField).toBeVisible({ timeout: 30_000 });
+
+    // Click Stop WITHOUT ever typing an answer.
+    const stopBtn = page.getByRole("button", { name: /stop/i });
+    await expect(stopBtn).toBeVisible({ timeout: 5000 });
+    await stopBtn.click();
+
+    // The run should terminate (Run re-enabled), same primary signal the infinite-loop Stop test
+    // above uses. The poll interval is 100ms, so this should resolve quickly; the window stays
+    // generous to match this file's own documented host-scheduling-variance tolerance.
+    const runBtn = page.getByRole("button", { name: /^run$/i });
+    await expect(runBtn).toBeEnabled({ timeout: 30_000 });
+
+    // Prove the engine is genuinely still usable afterward, not just "looks re-enabled": run a
+    // simple program, including one that itself calls input(), proving the SAME stdin machinery
+    // recovered cleanly and is not left in some half-broken polling state.
+    await setEditorContent(page, 'still = input("still there? ")\nprint(f"yes: {still}")');
+    await runBtn.click();
+    const secondInputField = page.locator("#stb-input-prompt");
+    await expect(secondInputField).toBeVisible({ timeout: 30_000 });
+    await secondInputField.fill("yep");
+    await secondInputField.press("Enter");
+    await expect(page.locator(".output-stream span").filter({ hasText: "yes: yep" }).first()).toBeVisible({ timeout: 30_000 });
+
+    if (consoleMsgs.length > 0) {
+      console.log("Console messages:", consoleMsgs.slice(-10).join("\n"));
+    }
+  });
 });
