@@ -66,6 +66,29 @@ function isModuleComplete(mod: Module, nodes: CompletedNode[]): boolean {
 let runIdSeq = 0;
 function nextRunId(): string { runIdSeq += 1; return `run-${runIdSeq}`; }
 
+// Manager fix round (item 1, portrait diagnosis): `portrait` used to be `useState(false)`, a
+// checkbox-only dev toggle with ZERO connection to the real viewport. On Niko's actual iPad (the
+// app's PRIMARY device), that meant the portrait-segmented layout NEVER activated in real use: the
+// full landscape two-pane layout always rendered, squeezed into an 834px-wide viewport.
+//
+// 900px, NOT AppShell's own existing 820px breakpoint (components.css, rail -> bottom-tabs). They
+// look like the same "narrow viewport" concept, but measuring against the real device caught a
+// second, separate latent bug: an iPad Pro 11 in portrait is 834 CSS px wide, which is WIDER than
+// 820, so AppShell's own rail-vs-bottom-tabs media query does not fire on Niko's primary device
+// either. Reusing 820 here would have silently inherited that same miss for this screen's
+// segmentation, the exact "looked fixed, still broken on the real device" trap this whole item is
+// about. 900 safely covers iPad Pro 11 portrait (834) and every smaller iPad, stays well below
+// iPad Pro 12.9 portrait (1024) and any landscape/desktop width, and is scoped to JUST this
+// screen's own layout decision; it deliberately does not touch AppShell's separate breakpoint,
+// which is a different component with its own blast radius, out of scope for this round (flagged
+// in the report for a follow-up, not fixed here). The checkbox stays as a manual override for
+// testing/preference (unchanged behavior once toggled, until the next real breakpoint-crossing
+// resize).
+function detectNarrowViewport(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(max-width: 900px)").matches;
+}
+
 export function LearnScreen({
   bundle, worker, inputCapable, learnView, lessonIndex, completedNodes,
   onNavigate, onOpenInSandbox, onLessonStepComplete, onEnterBoss, workerReady = true
@@ -264,8 +287,21 @@ function LessonPlayer({
   // clause: never auto-pass a step that matches no grader).
   const route: GraderRoute = graderRouteFor(step);
 
-  const [portrait, setPortrait] = useState(false);
-  const [segment, setSegment] = useState<"lesson" | "code" | "output">("lesson");
+  const [portrait, setPortrait] = useState(detectNarrowViewport);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(max-width: 900px)");
+    const onChange = () => setPortrait(mql.matches);
+    mql.addEventListener?.("change", onChange);
+    return () => mql.removeEventListener?.("change", onChange);
+  }, []);
+  // Manager fix round (item 1): "scratch" joins lesson/code/output as its OWN segment, so the
+  // scratch REPL + Run scratch is reachable via the same tab control as everything else, instead of
+  // sitting outside the segmented layout entirely (the old shape: always-rendered, unconditioned on
+  // `segment`, and collapsed by default behind a native <details> with no visible-affordance
+  // disclosure control, see the scratch-pane block below for the full trace).
+  const [segment, setSegment] = useState<"lesson" | "code" | "output" | "scratch">("lesson");
+  const [scratchOpen, setScratchOpen] = useState(true); // landscape-only collapse toggle, default OPEN
   const [code, setCode] = useState(step?.starterCode ?? "");
   const [scratchCode, setScratchCode] = useState("");
   const [running, setRunning] = useState(false);
@@ -288,6 +324,14 @@ function LessonPlayer({
   const scratchRunId = useRef<string | null>(null);
   const editorHandle = useRef<CodeEditorHandle>(null);
   const scratchHandle = useRef<CodeEditorHandle>(null);
+  // Manager fix round (item 5): the liveExample "try it" box's real run. tryItRunId is a SEPARATE
+  // marker from gradedRunId's own identity check below (it is set to the SAME value as
+  // gradedRunId.current for the run's duration, see runTryIt), used only so the subscribe effect
+  // knows to ALSO buffer text for the box's own Promise<string> return, without changing any of
+  // the existing gradedRunId-keyed branches at all.
+  const tryItRunId = useRef<string | null>(null);
+  const tryItBuffer = useRef("");
+  const tryItResolve = useRef<((out: string) => void) | null>(null);
 
   useEffect(() => {
     setCode(step?.starterCode ?? "");
@@ -321,6 +365,13 @@ function LessonPlayer({
         setItems(prev => [...prev, { kind: "figure", id: `${msg.runId}-fig`, alt: msg.alt, dataUrl: bytesToDataUrl(msg.png) }]);
       } else if (msg.t === "inputRequest" && (msg.runId === gradedRunId.current || msg.runId === scratchRunId.current)) {
         setActiveInput({ runId: msg.runId, prompt: msg.prompt });
+        // Manager fix round (item 5): a liveExample's tryIt run (real Python now, was a "hey"
+        // stub) can call input() (m01-l4-s3 does). In portrait the interactive prompt line lives
+        // in the work pane's Output segment, not the Lesson segment the tryIt box is clicked from;
+        // without this, a learner who clicked Run from Lesson would see nothing happen and have to
+        // guess to switch tabs. runDone already does this same auto-switch below; doing it here
+        // too (on the FIRST sign the run needs the learner) means it never even looks stuck.
+        if (portrait && msg.runId === gradedRunId.current) setSegment("output");
       } else if (msg.t === "checkResult" && msg.runId === gradedRunId.current) {
         setCheckOutcome({ passed: msg.passed, results: msg.results });
         if (msg.passed) {
@@ -329,14 +380,65 @@ function LessonPlayer({
       } else if (msg.t === "runDone") {
         if (msg.runId === gradedRunId.current || msg.runId === scratchRunId.current) {
           setRunning(false);
-          if (portrait) setSegment("output");
+          // item 5: a tryIt run's recap already shows INLINE in LessonPane's own "try it" box, in
+          // the Lesson segment the learner is already looking at; auto-switching to Output here
+          // would yank them away from the very teaching pane they just interacted with, for exactly
+          // the runs that most want to stay put. Real graded Run/Check/"Run it and see" keep the
+          // existing auto-switch unchanged (their output only ever appears in the Output segment).
+          // The EARLIER inputRequest branch above still switches for a tryIt run that genuinely
+          // needs the learner's input (this box has no input field of its own to give it).
+          if (portrait && msg.runId !== tryItRunId.current) setSegment("output");
         }
       } else if (msg.t === "resetDone" && msg.namespace === "scratch" && msg.ok) {
         setScratchItems([]);
       }
+
+      // Manager fix round (item 5): an ADDITIVE side channel, not part of the if/else-if chain
+      // above (that chain already correctly routes this SAME run's stdout/error/figure/inputRequest
+      // into `items` and the work pane's OutputStream, since runTryIt below sets gradedRunId.current
+      // to the tryIt run's id). This just ALSO buffers plain text so LessonPane's small inline box
+      // gets its own quick recap via the Promise<string> runTryIt returns, without a second,
+      // separate, untested run/subscribe/input-handling path of its own.
+      if ("runId" in msg && msg.runId === tryItRunId.current) {
+        if (msg.t === "stdout") {
+          tryItBuffer.current += msg.text;
+        } else if (msg.t === "error") {
+          tryItBuffer.current += (tryItBuffer.current ? "\n" : "") + msg.message;
+        } else if (msg.t === "runDone") {
+          const out = tryItBuffer.current.trim();
+          tryItRunId.current = null;
+          tryItResolve.current?.(out.length > 0 ? out : "(no output)");
+          tryItResolve.current = null;
+        }
+      }
     });
     return unsubscribe;
   }, [worker, portrait, mod.id, lesson.id, step?.id, onLessonStepComplete]);
+
+  // Manager fix round (item 5): was `async () => "hey"`, a literal leftover stub, so every
+  // liveExample's "try it" Run silently returned the string "hey" instead of executing anything.
+  // Reuses the SAME graded-namespace run plumbing runGraded/runReveal already use (isolated per
+  // run, F9; never the persistent scratch namespace, per the Manager's brief) rather than a
+  // bespoke path, so stdout/error/figure/inputRequest/runDone are all handled by the ALREADY
+  // correct, already-tested branches above; this function only adds the small buffering side
+  // channel wired in the subscribe effect to turn that into the single Promise<string> LessonPane's
+  // inline box expects.
+  async function runTryIt(tryCode: string): Promise<string> {
+    if (!workerReady) {
+      return "Python is still starting up. Wait a moment, then try Run again.";
+    }
+    const runId = nextRunId();
+    gradedRunId.current = runId;
+    tryItRunId.current = runId;
+    tryItBuffer.current = "";
+    setRunning(true);
+    setCheckOutcome(null);
+    setItems([]);
+    return new Promise<string>((resolve) => {
+      tryItResolve.current = resolve;
+      worker.send({ t: "run", runId, code: tryCode, mountFiles: [], namespace: "graded" });
+    });
+  }
 
   function runGraded() {
     const runId = nextRunId();
@@ -457,7 +559,7 @@ function LessonPlayer({
       moduleTitle={mod.title}
       lesson={lesson}
       stepIndex={stepIndex}
-      onTryItRun={async () => "hey"}
+      onTryItRun={runTryIt}
       onEnterBoss={onEnterBoss ? () => onEnterBoss(mod.id) : undefined}
       answer={answer}
       onAnswerChange={updateAnswer}
@@ -485,7 +587,7 @@ function LessonPlayer({
         <div class="spacer" />
         {portrait && (
           <div class="seg" role="tablist" aria-label="Lesson view">
-            {(["lesson", "code", "output"] as const).map(s => (
+            {(["lesson", "code", "output", "scratch"] as const).map(s => (
               <button key={s} type="button" role="tab" aria-selected={segment === s} onClick={() => setSegment(s)}>
                 {s[0]!.toUpperCase() + s.slice(1)}
               </button>
@@ -573,17 +675,54 @@ function LessonPlayer({
         )}
       </div>
       {(!portrait || segment === "code") && showEditorBezel && <KeyRow editorRef={editorHandle} />}
-      <details style={{ margin: "8px 14px" }}>
-        <summary class="dim-label">scratch REPL (persistent, never feeds Check)</summary>
-        <div class="editor-bezel" style={{ height: "140px" }}>
-          <CodeEditor value={scratchCode} onChange={setScratchCode} ariaLabel="Scratch REPL editor" handleRef={scratchHandle} />
+      {/* Manager fix round (item 1): this used to be a native <details>/<summary>, unconditioned on
+          `segment`, always rendered below the whole player regardless of portrait/landscape. Two
+          compounding bugs: (a) <details> is CLOSED by default with no `open` attribute, so its
+          editor/Run/output were invisible (not just "less prominent") behind a plain dim-uppercase
+          label with zero visible disclosure affordance (no chevron, no button chrome) on a touch
+          device, exactly the "label visible, control hidden" shape; (b) in portrait it sat entirely
+          OUTSIDE the lesson/code/output segment system, so even a learner who discovered the tap-
+          to-expand trick had no indication a 4th surface existed at all. Portrait: its own segment,
+          reachable the same way as everything else, always expanded once selected (the segment tab
+          IS the disclosure control, a second nested toggle would be redundant). Landscape: a real
+          `<button aria-expanded>` toggle, defaulting OPEN (never hidden on first render), so the
+          same "no label-visible-but-control-hidden" invariant holds there too. */}
+      {(!portrait || segment === "scratch") && (
+        <div class="scratch-pane" style={{ margin: portrait ? "0 14px 14px" : "8px 14px" }}>
+          {portrait ? (
+            <div class="dim-label" style={{ padding: "10px 0 6px" }}>scratch REPL (persistent, never touches grading)</div>
+          ) : (
+            // Button text deliberately avoids the word "Check": a getByRole("button", { name:
+            // /Check/ }) query used throughout the suite for the REAL Check button would otherwise
+            // ambiguously match this toggle too, the moment it became a real queryable button
+            // instead of a <summary> (jsdom's role computation never exposed <summary> as
+            // role="button" in the first place, which is part of why the old shape hid this from
+            // every existing test).
+            <button
+              type="button"
+              class="scratch-toggle dim-label"
+              aria-expanded={scratchOpen}
+              aria-controls="scratch-repl-body"
+              onClick={() => setScratchOpen(o => !o)}
+            >
+              <span aria-hidden="true">{scratchOpen ? "▾" : "▸"}</span>{" "}
+              scratch REPL (persistent, never touches grading)
+            </button>
+          )}
+          {(portrait || scratchOpen) && (
+            <div id="scratch-repl-body">
+              <div class="editor-bezel" style={{ height: "140px" }}>
+                <CodeEditor value={scratchCode} onChange={setScratchCode} ariaLabel="Scratch REPL editor" handleRef={scratchHandle} />
+              </div>
+              <div class="run-bar">
+                <button type="button" class="btn btn-small" onClick={runScratch}>Run scratch</button>
+                <button type="button" class="btn btn-ghost btn-small" onClick={() => setRestartScratchOpen(true)}>Restart</button>
+              </div>
+              <OutputStream items={scratchItems} emptyHint="the scratch REPL keeps its own names between runs" />
+            </div>
+          )}
         </div>
-        <div class="run-bar">
-          <button type="button" class="btn btn-small" onClick={runScratch}>Run scratch</button>
-          <button type="button" class="btn btn-ghost btn-small" onClick={() => setRestartScratchOpen(true)}>Restart</button>
-        </div>
-        <OutputStream items={scratchItems} emptyHint="the scratch REPL keeps its own names between runs" />
-      </details>
+      )}
       <RestartConfirmDialog
         open={restartScratchOpen}
         onCancel={() => setRestartScratchOpen(false)}

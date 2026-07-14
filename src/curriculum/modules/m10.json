@@ -162,7 +162,7 @@
           "conceptTags": ["json"],
           "strand": "core",
           "reviewable": false,
-          "body": "The real shape of a data program is three steps: read the data in, PROCESS it, then write it back out. The reading and writing you have now seen. The processing in the middle is just the loops, conditions, and dict work you already know, applied to whatever you loaded. Let us sharpen that middle step, then the boss ties all three together."
+          "body": "The real shape of a data program is three steps: read the data in, PROCESS it, then write it back out. The reading and writing you have now seen. The processing in the middle is just the loops, conditions, and dict work you already know, applied to whatever you loaded.\n\nOne small tool you will want for the boss: before you read a file, you often need to know whether it exists yet. os.path.exists(path) answers that with True or False, so you can start with a fresh empty list the very first time and load the saved one on every run after that (write import os at the top to use it). Let us sharpen the middle step, then the boss ties all three together."
         },
         {
           "id": "m10-l4-s2",

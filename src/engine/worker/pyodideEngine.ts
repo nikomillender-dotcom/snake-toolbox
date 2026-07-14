@@ -42,7 +42,15 @@ interface MinimalPyodide {
   toPy(obj: unknown): PyProxyDict;
   loadPackage(names: string | string[]): Promise<void>;
   setInterruptBuffer(buffer: Int32Array): void;
-  setStdin(opts: { stdin: () => string }): void;
+  // Manager fix round, item 6(d): throws KeyboardInterrupt if SIGINT was written to the interrupt
+  // buffer since the last check. Pyodide's own documented pattern for an interruptible stdin poll
+  // loop (pyodide.org/en/stable/usage/keyboard-interrupts.html, version-pinned to match this
+  // project's 314.0.2).
+  checkInterrupt(): void;
+  // stdin may return `undefined` (or `null`) to signal EOF, which makes a pending input() raise
+  // EOFError in the running Python code rather than block forever (item 6a: used to force EOF
+  // during check(), never real interactive input; also the poll-loop's timeout branch, item 6d).
+  setStdin(opts: { stdin: () => string | undefined }): void;
   FS: {
     mkdir(path: string): void;
     readdir(path: string): string[];
@@ -153,10 +161,29 @@ const INPUT_STATUS_IDLE = 0;
 const INPUT_STATUS_READY = 1;
 // Minimum inputBuffer size: 8 bytes header + at least some data space
 const INPUT_HEADER_BYTES = 8;
+// Manager fix round, item 6(d): the stdin wait polls in short bursts instead of blocking
+// indefinitely, so a pending input() can notice a Stop click (SIGINT written to the SAME
+// interrupt buffer the opcode-level interrupt already uses) within one poll interval instead of
+// never. 100ms matches Pyodide's own documented example for this exact pattern; short enough to
+// feel immediate to a person, long enough not to spin the CPU.
+const INPUT_POLL_MS = 100;
 
 export class PyodideEngine implements PythonEngine {
   private pyodide!: MinimalPyodide;
   private inputCapable = false;
+  // Manager fix round, item 6(a): true for the duration of check() only. Learn-mode grading is
+  // NEVER interactive by design (boss hiddenTests monkeypatch builtins.input themselves before
+  // run() is even called); this flag makes that literally true at the stdin layer too, so a
+  // graded answer that calls input() gets an immediate EOFError instead of freezing the worker.
+  // Before this fix, check() never wired `currentHooks` the way run() does, so a stdin callback's
+  // onInputRequest() call silently no-opped on `null?.onInputRequest`: no message ever reached the
+  // main thread, no UI ever changed, and the worker sat in Atomics.wait forever with no observable
+  // signal and no possible recovery (Stop cannot help either: SIGINT is only checked BETWEEN
+  // Python opcodes, and the worker was not executing opcodes, it was parked in a blocking native
+  // wait). That silent, permanent, "check() drops the ball entirely" freeze is the actual root
+  // cause Niko hit; the EOF-during-grading policy below is a second, independent layer of defense
+  // (grading should never wait on a person even if currentHooks were wired correctly).
+  private grading = false;
   private fatalCb: ((reason: FatalReason) => void) | null = null;
   // B4: SAB refs for interrupt and input handshake
   private interruptBuffer: SharedArrayBuffer | null = null;
@@ -217,18 +244,14 @@ export class PyodideEngine implements PythonEngine {
       const inputDataView = this.inputDataView;
       const engine = this;
       loadOpts.stdin = () => {
+        // item 6(a): grading (check()) is NEVER interactive, by locked design; EOF makes a
+        // graded answer's input() raise EOFError immediately instead of blocking the worker.
+        if (engine.grading) return undefined;
         // Tell the main thread we need input via a postMessage (onInputRequest hook)
         if (engine.currentHooks) {
           engine.currentHooks.onInputRequest("");
         }
-        // Block synchronously until the main thread writes input data via the SAB
-        Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
-        Atomics.wait(inputInt32, 0, INPUT_STATUS_IDLE);
-        // Read the input data
-        const length = Atomics.load(inputInt32, 1);
-        const data = inputDataView.slice(0, length);
-        Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
-        return new TextDecoder().decode(data);
+        return engine.waitForStdinOrInterrupt(inputInt32, inputDataView);
       };
     }
     this.pyodide = await pyodideModule.loadPyodide(loadOpts as { indexURL?: string });
@@ -243,19 +266,14 @@ export class PyodideEngine implements PythonEngine {
       const engine = this;
       this.pyodide.setStdin({
         stdin: () => {
+          // item 6(a): same EOF-during-grading policy as the pre-load stdin above; this is the
+          // wiring that is actually LIVE for every real run once Pyodide has finished loading.
+          if (engine.grading) return undefined;
           // Tell the main thread we need input
           if (engine.currentHooks) {
             engine.currentHooks.onInputRequest("");
           }
-          // Block synchronously until the main thread writes input data
-          Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
-          Atomics.wait(inputInt32, 0, INPUT_STATUS_IDLE);
-          // Read the input data
-          const length = Atomics.load(inputInt32, 1);
-          const data = inputDataView.slice(0, length);
-          // Reset for next call
-          Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
-          return new TextDecoder().decode(data);
+          return engine.waitForStdinOrInterrupt(inputInt32, inputDataView);
         }
       });
     }
@@ -265,6 +283,46 @@ export class PyodideEngine implements PythonEngine {
     this.sessionGlobals = this.pyodide.toPy({});
     if (!this.pyodide.FS.analyzePath(GRADING_DIR).exists) this.pyodide.FS.mkdir(GRADING_DIR);
     return { pyodideVersion: this.pyodide.version };
+  }
+
+  // Manager fix round, item 6(d): shared by both stdin wiring sites above. Was a single
+  // `Atomics.wait(inputInt32, 0, INPUT_STATUS_IDLE)` with NO timeout, which blocks the worker
+  // thread inside this callback indefinitely with no way out: Pyodide checks the interrupt
+  // buffer BETWEEN Python opcodes, but the worker is not executing opcodes while parked here, so
+  // a Stop click (which writes SIGINT into that same interrupt buffer, pyodideEngine.stop() below)
+  // had no way to ever be noticed. Polls in short bursts instead (Pyodide's own documented pattern
+  // for exactly this: pyodide.org/en/stable/usage/keyboard-interrupts.html, version-pinned to this
+  // project's 314.0.2 build) and calls checkInterrupt() on each timeout, which throws
+  // KeyboardInterrupt if SIGINT landed meanwhile, unblocking a pending input() the SAME way Stop
+  // already unblocks a running loop, no separate B4 status needed.
+  //
+  // workerClient.ts's stop() handling used to ALSO write directly into the input SAB (status =
+  // "ready", as if data had arrived) specifically to wake this wait early. That was a real bug,
+  // not just an optimization attempt: it woke the wait, but with no real input data ever written,
+  // so the callback returned STALE/garbage bytes from a PRIOR input() call (or empty on the very
+  // first one) as if the learner had typed them, letting the blocked code continue running with
+  // wrong input instead of actually stopping. Removed in favor of this poll loop, which is
+  // correct by construction (it only ever returns real data or a real KeyboardInterrupt).
+  private waitForStdinOrInterrupt(inputInt32: Int32Array, inputDataView: Uint8Array): string | undefined {
+    while (true) {
+      Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
+      const result = Atomics.wait(inputInt32, 0, INPUT_STATUS_IDLE, INPUT_POLL_MS);
+      if (result === "timed-out") {
+        // Guarded: checkInterrupt() needs setInterruptBuffer() to have already run, which only
+        // happens after loadPyodide() resolves (see boot() above). In the astronomically unlikely
+        // case this fires from the PRE-load stdin wiring before that, just keep polling; the input
+        // handshake below still works correctly, only the early-interrupt check is unavailable
+        // for that narrow window.
+        this.pyodide?.checkInterrupt?.();
+        continue;
+      }
+      // "ok" (woken by notify) or "not-equal" (already changed before we even waited): either way
+      // real data has been written by the main thread's inputResponse handshake (workerClient.ts).
+      const length = Atomics.load(inputInt32, 1);
+      const data = inputDataView.slice(0, length);
+      Atomics.store(inputInt32, 0, INPUT_STATUS_IDLE);
+      return new TextDecoder().decode(data);
+    }
   }
 
   // v5 fileDrain: scan the session working dir for new/changed files.
@@ -381,28 +439,62 @@ export class PyodideEngine implements PythonEngine {
   }
 
   async check(params: CheckParams): Promise<CheckOutcome> {
-    // F9: check is ALWAYS graded + isolated, regardless of any prior namespace's state.
-    this.pyodide.runPython("_hard_reset_for_grading()");
-    this.clearGradingDir();
-    this.mountFiles(params.mountFiles, GRADING_DIR);
-    const globals = this.pyodide.toPy({});
-
+    // Manager fix round, item 6(a): grading is never interactive (locked design; boss hiddenTests
+    // monkeypatch builtins.input themselves before run(), never reaching real stdin). This flag,
+    // read by both stdin wiring sites above, is what actually makes a graded input() fail fast
+    // with EOFError instead of freezing the worker forever, see this.grading's own doc comment.
+    this.grading = true;
     try {
-      this.pyodide.runPython(params.code, { globals });
-    } catch {
-      return { passed: false, results: [] };
-    }
+      // F9: check is ALWAYS graded + isolated, regardless of any prior namespace's state.
+      this.pyodide.runPython("_hard_reset_for_grading()");
+      this.clearGradingDir();
+      this.mountFiles(params.mountFiles, GRADING_DIR);
+      const globals = this.pyodide.toPy({});
 
-    const results = params.hiddenTests.map((test) => {
       try {
-        this.pyodide.runPython(test.code, { globals });
-        return { id: test.id, group: test.group, passed: true, message: test.message };
+        this.pyodide.runPython(params.code, { globals });
       } catch (err) {
-        return { id: test.id, group: test.group, passed: false, message: test.message, actual: String(err) };
+        if (this.isGradingInputEof(err)) {
+          return { passed: false, results: [this.gradingInputEofOutcome("submission")] };
+        }
+        return { passed: false, results: [] };
       }
-    });
 
-    return { passed: results.every((r) => r.passed), results };
+      const results = params.hiddenTests.map((test) => {
+        try {
+          this.pyodide.runPython(test.code, { globals });
+          return { id: test.id, group: test.group, passed: true, message: test.message };
+        } catch (err) {
+          if (this.isGradingInputEof(err)) {
+            return { ...this.gradingInputEofOutcome(test.id), group: test.group };
+          }
+          return { id: test.id, group: test.group, passed: false, message: test.message, actual: String(err) };
+        }
+      });
+
+      return { passed: results.every((r) => r.passed), results };
+    } finally {
+      this.grading = false;
+    }
+  }
+
+  // Manager fix round, item 6(b): "coach, never shame," and never the raw Python EOFError
+  // traceback, which would read like an unexplained crash. The message plainly states the
+  // structural rule (graded checks never answer input()) and the concrete fix (take the value as
+  // a parameter, or otherwise avoid calling input() at the top level), matching the voice of every
+  // other coaching message in this app (CheckResult's fail card, gradeAnswer.ts's EMPTY_NUDGE).
+  private isGradingInputEof(err: unknown): boolean {
+    return this.classifyError(err).errorType === "EOFError";
+  }
+  private gradingInputEofOutcome(id: string): { id: string; passed: false; message: string } {
+    return {
+      id,
+      passed: false,
+      message:
+        "Graded checks can't answer input() prompts. The hidden tests supply their own inputs when " +
+        "they run your code, so write your function or answer without calling input() (or running " +
+        "it) at the top level.",
+    };
   }
 
   stop(_runId: string): void {

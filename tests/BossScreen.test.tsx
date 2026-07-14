@@ -47,7 +47,7 @@ describe("BossScreen (L7, the loud-calm-loud arc)", () => {
     const worker = createMockWorkerClient({ delayMs: 5 });
     render(<BossScreen boss={boss} worker={worker} reducedMotion inputCapable={false} />);
     fireEvent.click(screen.getByRole("button", { name: /BEGIN/ }));
-    expect(screen.getByText(/Some features need a secure setup/)).toBeInTheDocument();
+    expect(screen.getByText(/input\(\) is unavailable on this device/)).toBeInTheDocument();
   });
 
   it("F5: Stop is disabled outright when inputCapable is false, not just visually inert while idle", () => {

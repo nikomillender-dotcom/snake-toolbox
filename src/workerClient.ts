@@ -17,7 +17,18 @@ const INPUT_HEADER_BYTES = 8;
 export function createWorkerClient(): WorkerClient {
   const listeners = new Set<(msg: WorkerToMain) => void>();
   let disposed = false;
-  let worker: Worker;
+  // Manager fix round (item 4, boot diagnostics): `worker` used to be a non-null `Worker` set
+  // synchronously by an UNGUARDED `new Worker(...)` call, so a spawn failure (module worker type
+  // unsupported, a blocked/failed resource fetch for the worker script on a cold iPad load, etc.)
+  // threw straight out of `createWorkerClient()`, which App.tsx calls from a `useMemo` during
+  // render. An uncaught render-time throw with no error boundary anywhere in the tree is exactly
+  // Niko's reported "silent blank screen" (Preact fails to render the whole subtree, nothing is
+  // shown, no message, "self-healed on reload" because whatever transient condition caused the
+  // throw happened not to recur). `worker` is now `Worker | null`; a spawn failure never throws
+  // out of this function, and is instead funneled through the SAME `fatal` channel every other
+  // boot failure (loadPyodide throwing, the F7 hash self-check) already uses, so App.tsx's ONE
+  // boot-error banner (added this round) covers all three named failure modes uniformly.
+  let worker: Worker | null;
   let lastBootArgs: Extract<MainToWorker, { t: "boot" }> | null = null;
   const respawnTimestamps: number[] = [];
 
@@ -32,17 +43,32 @@ export function createWorkerClient(): WorkerClient {
     for (const cb of listeners) cb(msg);
   }
 
-  function spawnWorker(): Worker {
-    const w = new Worker(
-      new URL("./worker-entry.ts", import.meta.url),
-      { type: "module" }
-    );
-    w.onmessage = (event: MessageEvent<WorkerToMain>) => { emit(event.data); };
-    w.onerror = (event) => { event.preventDefault(); emit({ t: "fatal", reason: "crash" }); };
-    return w;
+  // Deferred so subscribers registered AFTER createWorkerClient() returns (App.tsx's own
+  // `useEffect` calling `worker.subscribe(...)`, which only runs after the first render commits)
+  // still receive it. A synchronous emit here would reach zero external listeners: only the
+  // `handleFatalRespawn` listener below is registered in time (it is added synchronously, in this
+  // same function body), which is exactly why the respawn retry still works even for a spawn
+  // failure on the very first attempt.
+  function emitFatalSoon(reason: "oom" | "crash" | "unknown"): void {
+    setTimeout(() => emit({ t: "fatal", reason }), 0);
   }
 
-  worker = spawnWorker();
+  function trySpawnWorker(): Worker | null {
+    try {
+      const w = new Worker(
+        new URL("./worker-entry.ts", import.meta.url),
+        { type: "module" }
+      );
+      w.onmessage = (event: MessageEvent<WorkerToMain>) => { emit(event.data); };
+      w.onerror = (event) => { event.preventDefault(); emit({ t: "fatal", reason: "crash" }); };
+      return w;
+    } catch {
+      return null;
+    }
+  }
+
+  worker = trySpawnWorker();
+  if (!worker) emitFatalSoon("unknown");
 
   function handleFatalRespawn(msg: WorkerToMain): void {
     if (msg.t !== "fatal" || disposed) return;
@@ -52,8 +78,9 @@ export function createWorkerClient(): WorkerClient {
     }
     if (respawnTimestamps.length >= MAX_RESPAWNS) return;
     respawnTimestamps.push(now);
-    try { worker.terminate(); } catch { /* already dead */ }
-    worker = spawnWorker();
+    try { worker?.terminate(); } catch { /* already dead */ }
+    worker = trySpawnWorker();
+    if (!worker) { emitFatalSoon("unknown"); return; }
     if (lastBootArgs) worker.postMessage(lastBootArgs);
   }
   listeners.add(handleFatalRespawn);
@@ -107,16 +134,25 @@ export function createWorkerClient(): WorkerClient {
 
       // B4: stop() writes SIGINT to the interrupt buffer to raise KeyboardInterrupt.
       // Also post the message so WorkerProtocolEngine can handle cleanup.
+      //
+      // Manager fix round, item 6(d): this used to ALSO wake a pending input() wait directly by
+      // writing INPUT_STATUS_READY into the input SAB and notifying it, as if real data had
+      // arrived. That was a real bug, not just belt-and-suspenders: it woke the worker's stdin
+      // callback, but with no actual input bytes ever written, so the callback read STALE/garbage
+      // data from a PRIOR input() call (or empty on the first one) and returned it as if the
+      // learner had typed it, letting the "stopped" code keep running with wrong input instead of
+      // actually stopping. Removed: pyodideEngine.ts's stdin callback now polls the interrupt
+      // buffer itself in short bursts (Pyodide's own documented pattern for this), so writing
+      // SIGINT here is already sufficient to interrupt a pending input() too, correctly, within
+      // one poll interval, with no separate wake needed.
       if (msg.t === "stop" && interruptView) {
         Atomics.store(interruptView, 0, 2); // 2 = SIGINT
-        // If the worker is blocked on Atomics.wait for input, we also need to wake it
-        if (inputInt32) {
-          Atomics.store(inputInt32, 0, INPUT_STATUS_READY);
-          Atomics.notify(inputInt32, 0);
-        }
       }
 
-      worker.postMessage(msg);
+      // worker can be null only when every spawn attempt (initial + respawns) has failed; the
+      // `fatal` banner is already showing by the time that is true, and there is nothing left to
+      // post to, so this is a safe, silent no-op rather than a throw.
+      worker?.postMessage(msg);
     },
 
     subscribe(cb: (msg: WorkerToMain) => void) {
@@ -127,7 +163,7 @@ export function createWorkerClient(): WorkerClient {
     dispose() {
       disposed = true;
       listeners.clear();
-      worker.terminate();
+      worker?.terminate();
     }
   };
 }

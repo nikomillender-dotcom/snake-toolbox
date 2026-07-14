@@ -1,6 +1,6 @@
 // App.tsx: the REAL composition root (I1). Round 3: IndexedDbStore wired for persistence,
 // fileDrain reaches SandboxScreen, all execution mocks replaced.
-import { useEffect, useMemo, useState, useCallback } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState, useCallback } from "preact/hooks";
 import { AppShell, type Surface } from "./components/AppShell";
 import { FirstLoadPrimer } from "./components/FirstLoadPrimer";
 import { LearnScreen } from "./screens/LearnScreen";
@@ -61,6 +61,24 @@ function buildLessonIndex(bundle: CurriculumBundle) {
   return idx;
 }
 
+// Manager fix round (item 4, boot diagnostics): Niko's first iPad load was a silent blank screen
+// that self-healed on reload, unacceptable for a new user. A worker spawn failure, a loadPyodide
+// throw, or the F7 boot self-check (hash mismatch) all end up as a CONTRACT-1 `fatal` message
+// (workerClient.ts and worker-entry.ts's catch both funnel into it), but nothing at the App level
+// ever read that message before this round: the worker's own internal respawn listener consumed
+// it silently, and the UI just sat on "Booting Python..." forever if every respawn attempt also
+// failed. This turns that ALREADY-ARRIVING signal into an honest, named banner instead of adding a
+// new failure channel. `everWarm` (was the runtime ever warm before this fatal) distinguishes "never
+// started" from "crashed mid-session," entirely derived UI-side since CONTRACT 1's `fatal` reason
+// enum (oom/crash/unknown) carries no stage field and the contract block is frozen, not touched here.
+function bootErrorMessage(reason: "oom" | "crash" | "unknown", everWarm: boolean): string {
+  const stage = everWarm ? "Python's engine crashed" : "Python did not start";
+  const detail = reason === "oom" ? "the device ran low on memory"
+    : reason === "crash" ? "an internal error"
+    : "an unknown problem";
+  return `${stage}: ${detail}.`;
+}
+
 function isLessonComplete(lesson: Lesson, nodes: CompletedNode[]): boolean {
   const nodeIds = new Set(nodes.map(n => n.nodeId));
   const emitting = lesson.steps.filter(s => COMPLETION_EMITTING_KINDS.has(s.kind));
@@ -103,6 +121,11 @@ export function App({ store }: AppProps) {
   const [primerDismissedOnce, setPrimerDismissedOnce] = useState(false);
   const [inputCapable, setInputCapable] = useState(true);
   const [runtimeState, setRuntimeState] = useState<"warm" | "cold" | "loading">("loading");
+  // Manager fix round (item 4): honest boot-failure surface. null = no fatal seen (or a later
+  // respawn/ready self-healed one away, matching the app's real self-healing behavior, just made
+  // visible instead of silent).
+  const [bootError, setBootError] = useState<{ reason: "oom" | "crash" | "unknown" } | null>(null);
+  const everWarmedRef = useRef(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [activeBossModuleId, setActiveBossModuleId] = useState<string | null>(null);
   const [completedNodes, setCompletedNodes] = useState<CompletedNode[]>([]);
@@ -280,7 +303,18 @@ export function App({ store }: AppProps) {
   // Worker subscription: boot handshake + fileDrain
   useEffect(() => {
     const unsubscribe = worker.subscribe((msg: WorkerToMain) => {
-      if (msg.t === "ready") { setInputCapable(msg.inputCapable); setRuntimeState("warm"); }
+      if (msg.t === "ready") {
+        setInputCapable(msg.inputCapable);
+        setRuntimeState("warm");
+        everWarmedRef.current = true;
+        setBootError(null); // a later ready (this round's respawn healed) clears any prior banner
+      }
+      // Manager fix round (item 4): surface a fatal honestly. workerClient's own internal listener
+      // already tries up to 3 respawns within 30s (F10); this banner is additive, never blocks that
+      // retry, and clears itself the instant a respawn succeeds (the `ready` branch above).
+      if (msg.t === "fatal") {
+        setBootError({ reason: msg.reason });
+      }
       // fileDrain: UPSERT drained files into the Store and surface them to SandboxScreen
       if (msg.t === "fileDrain" && msg.namespace === "session") {
         setDrainedFiles(prev => {
@@ -301,7 +335,7 @@ export function App({ store }: AppProps) {
   }, [worker, store]);
 
   function startBoot() {
-    setPrimerOpen(false); setPrimerDismissedOnce(true); setRuntimeState("loading");
+    setPrimerOpen(false); setPrimerDismissedOnce(true); setRuntimeState("loading"); setBootError(null);
     worker.send({
       t: "boot", pyodideVersion: PYODIDE_VERSION,
       pyodideHash: PYODIDE_WASM_HASH,
@@ -320,13 +354,34 @@ export function App({ store }: AppProps) {
     }
   }, []);
 
+  // Manager fix round (item 4): ONE persistent role="status" shell, mounted from first render
+  // (SF5 discipline, banked from CheckResult/the DegradedBootBanner fix below): only its text
+  // content and color ever change, it is never conditionally added to/removed from the tree, so a
+  // real screen reader reliably announces the transition into an error state instead of missing a
+  // freshly-mounted region. Idle (nothing to say yet) collapses it visually via .visually-hidden,
+  // never `display: none` via a conditional mount.
+  const showBootLoading = !primerOpen && runtimeState === "loading" && !bootError;
+  const bootBannerText = bootError
+    ? bootErrorMessage(bootError.reason, everWarmedRef.current)
+    : showBootLoading ? "Booting Python..." : "";
+  const bootBannerIdle = bootBannerText === "";
+
   return (
     <AppShell active={surface} onNavigate={setSurface} runtimeState={runtimeState}>
       <FirstLoadPrimer open={primerOpen && !primerDismissedOnce} sizeMb={13} isMetered={false}
         onDownloadNow={startBoot} onWaitForWifi={() => setPrimerOpen(false)} />
-      {!primerOpen && runtimeState === "loading" && (
-        <div class="banner info" role="status" style={{ margin: "12px" }}>Booting Python...</div>
-      )}
+      <div
+        class={`banner${bootError ? " warn" : " info"}${bootBannerIdle ? " visually-hidden" : ""}`}
+        role="status"
+        style={{ margin: "12px", alignItems: "center" }}
+      >
+        <span>{bootBannerText}</span>
+        {bootError && (
+          <button type="button" class="btn btn-ghost btn-small" onClick={startBoot} style={{ marginLeft: "10px" }}>
+            Try again
+          </button>
+        )}
+      </div>
       {surface === "learn" && (
         <LearnScreen bundle={bundle} worker={worker} inputCapable={inputCapable}
           learnView={learnView} lessonIndex={lessonIndex} completedNodes={completedNodes}

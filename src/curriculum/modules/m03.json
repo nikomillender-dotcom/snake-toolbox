@@ -208,7 +208,7 @@
           "conceptTags": ["valueerror"],
           "strand": "debug",
           "statTags": ["DEBUG"],
-          "prompt": "The text here is a temperature like \"36.6\". Calling int() on it raises ValueError: invalid literal for int(). The value is a real number, just not a WHOLE one, so int() refuses it. Fix read_temp so it returns the decimal as a number.",
+          "prompt": "The text here is a temperature like \"36.6\". Calling int() on it raises ValueError: invalid literal for int(). The value is a real number, just not a WHOLE one, so int() refuses it. The tool for decimals is float() (you met it in Module 2). Fix read_temp so it returns the decimal as a number.",
           "starterCode": "def read_temp(text):\n    # text is a decimal reading, like \"36.6\"\n    return int(text)",
           "hiddenTests": [
             { "id": "m03-l4-s2-t1", "code": "assert abs(read_temp(\"36.6\") - 36.6) < 0.005", "message": "read_temp(\"36.6\") should give the number 36.6" },

@@ -51,6 +51,11 @@
 .step-nav { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .step-nav .spacer { flex: 1; }
 
+/* ---- scratch REPL disclosure toggle (Manager fix round, item 1: landscape-only collapse; a real
+   button with a visible expand/collapse glyph, replacing a native <details>/<summary> that gave no
+   visible affordance of being interactive and was closed by default) ---- */
+.scratch-toggle { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 0; padding: 10px 4px; min-height: var(--target-min); cursor: pointer; text-align: left; }
+
 /* ---- output stream / console ---- */
 .output-stream { background: var(--console-bg); margin: 0 12px 12px; border-radius: 10px; border: 1px solid var(--line); min-height: 96px; max-height: 260px; overflow: auto; padding: 12px 14px; font-family: var(--font-mono); font-size: 15px; line-height: 1.6; color: var(--console-fg, var(--ink)); }
 .output-stream .prompt { color: #5b5348; }

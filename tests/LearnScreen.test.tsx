@@ -113,13 +113,19 @@ describe("LearnScreen (L2, F9 grading isolation at the UI-wiring level)", () => 
   it("renders the degraded-boot banner when inputCapable is false (F5)", () => {
     const worker = createMockWorkerClient({ delayMs: 5 });
     render(<LearnScreen {...defaultProps()} worker={worker} inputCapable={false} />);
-    expect(screen.getByText(/Some features need a secure setup/)).toBeInTheDocument();
+    const banner = screen.getByText(/input\(\) is unavailable on this device/);
+    expect(banner).toBeInTheDocument();
+    expect(banner).toBeVisible();
   });
 
-  it("does not render the degraded-boot banner when inputCapable is true", () => {
+  it("does not VISIBLY render the degraded-boot banner text when inputCapable is true, but the status region is already mounted (SF5: never a freshly-mounted live region)", () => {
     const worker = createMockWorkerClient({ delayMs: 5 });
     render(<LearnScreen {...defaultProps()} worker={worker} inputCapable />);
-    expect(screen.queryByText(/Some features need a secure setup/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/input\(\) is unavailable on this device/)).not.toBeInTheDocument();
+    // the role="status" shell itself is present from first render (query by role, not text, since
+    // its text is empty while idle); only its content/visibility ever changes.
+    const statusRegions = screen.getAllByRole("status", { hidden: true });
+    expect(statusRegions.length).toBeGreaterThan(0);
   });
 });
 

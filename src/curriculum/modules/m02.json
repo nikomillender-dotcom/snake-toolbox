@@ -73,7 +73,7 @@
           "conceptTags": ["numbers", "operators"],
           "strand": "core",
           "reviewable": false,
-          "body": "Python does math the way you would expect, with a couple of extra tools worth knowing.\n\nThe usual crew: + add, - subtract, * multiply, / divide. One surprise: plain / always gives you a decimal, so 10 / 2 is 5.0, not 5. A number with a decimal point is called a float; a whole number is an int.\n\nThree power tools you will actually use:\n** raises to a power, so 2 ** 3 is 8 (two, three times over).\n// divides and throws away the remainder, so 17 // 5 is 3.\n% gives you just the remainder, so 17 % 5 is 2. That percent sign is oddly useful: it is how you check if a number is even (n % 2 is 0) or wrap a value around a limit."
+          "body": "Python does math the way you would expect, with a couple of extra tools worth knowing.\n\nThe usual crew: + add, - subtract, * multiply, / divide. One surprise: plain / always gives you a decimal, so 10 / 2 is 5.0, not 5. A number with a decimal point is called a float; a whole number is an int. And just as int() turns a string of digits into a whole number, float() turns a decimal string like \"3.5\" into the number 3.5.\n\nThree power tools you will actually use:\n** raises to a power, so 2 ** 3 is 8 (two, three times over).\n// divides and throws away the remainder, so 17 // 5 is 3.\n% gives you just the remainder, so 17 % 5 is 2. That percent sign is oddly useful: it is how you check if a number is even (n % 2 is 0) or wrap a value around a limit."
         },
         {
           "id": "m02-l2-s2",
@@ -274,7 +274,7 @@
           "conceptTags": ["operators", "f-strings"],
           "strand": "core",
           "reviewable": false,
-          "body": "Time to put variables, math, and f-strings to work on something with a real shape. No new ideas here, just combining what you have.\n\nOne handy tool for money math: round(value, 2) trims a number to two decimal places, so round(108.0, 2) stays 108.0 and round(17.519, 2) becomes 17.52. You will want that any time you are dealing with dollars."
+          "body": "Time to put variables, math, and f-strings to work on something with a real shape. No new ideas here, just combining what you have.\n\nTwo handy tools for money math. First, percentages: a percent is just a number out of 100, so 8 percent of a price is price * 8 / 100, and ADDING 8 percent means multiplying by (1 + 8 / 100), which is 1.08. Second, round(value, 2) trims a number to two decimal places, so round(108.0, 2) stays 108.0 and round(17.519, 2) becomes 17.52. You will lean on both any time you are dealing with dollars."
         },
         {
           "id": "m02-l5-s2",

@@ -251,6 +251,11 @@ export function LessonPane({ moduleTitle, lesson, stepIndex, onTryItRun, onEnter
   const step = lesson.steps[stepIndex];
   const [tryOut, setTryOut] = useState<string | null>(null);
   const [tryCode, setTryCode] = useState(step?.code ?? "");
+  // Manager fix round (item 5): onTryItRun now actually runs Python (was a hardcoded "hey" stub),
+  // which means it genuinely takes real time (a worker round-trip, possibly an interactive
+  // input() pause). "Handle the running state honestly": disable Run and say so while in flight,
+  // never let a second click queue a second overlapping run.
+  const [tryRunning, setTryRunning] = useState(false);
 
   // Manager fix round, bug 2 side-effect: LessonPane is a PERSISTENT instance across step
   // navigation (it is never remounted when stepIndex changes), so the two lines above only ever
@@ -264,12 +269,23 @@ export function LessonPane({ moduleTitle, lesson, stepIndex, onTryItRun, onEnter
   useEffect(() => {
     setTryCode(step?.code ?? "");
     setTryOut(null);
+    setTryRunning(false);
   }, [step?.id]);
 
   async function runTryIt() {
-    if (!onTryItRun) return;
-    const out = await onTryItRun(tryCode);
-    setTryOut(out);
+    if (!onTryItRun || tryRunning) return;
+    // item 5: onTryItRun is now a REAL, possibly slow (worker round-trip) run. LessonPane is the
+    // persistent-instance component from the bug-2 comment above: if the learner navigates to a
+    // different step while this is still in flight, the promise still resolves, but it must never
+    // paint a NOW-STALE result onto whatever step is showing by then.
+    const stepIdAtStart = step?.id;
+    setTryRunning(true);
+    try {
+      const out = await onTryItRun(tryCode);
+      if (step?.id === stepIdAtStart) setTryOut(out);
+    } finally {
+      if (step?.id === stepIdAtStart) setTryRunning(false);
+    }
   }
 
   if (!step) return null;
@@ -281,12 +297,20 @@ export function LessonPane({ moduleTitle, lesson, stepIndex, onTryItRun, onEnter
 
       {step.kind === "prose" && step.body && <p class="prose">{step.body}</p>}
 
+      {/* Manager fix round (item 2): the liveExample prompt (the actual teaching sentence, e.g.
+          "Hit Run. Watch the console show your words.") never rendered; only the code block and
+          Run button did. Rendered here, same .prose treatment prose/mcq/parsons already use, ABOVE
+          the code card so it reads as the instruction for what follows, not a caption under it. */}
+      {step.kind === "liveExample" && step.prompt && <p class="prose">{step.prompt}</p>}
+
       {step.kind === "liveExample" && step.code && (
         <div class="card" style={{ margin: "18px 0" }}>
           <div class="dim-label" style={{ padding: "10px 14px 0" }}>try it (live)</div>
           <pre class="mono" style={{ padding: "8px 14px 12px", whiteSpace: "pre" }}>{tryCode}</pre>
           <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 12px 12px" }}>
-            <button type="button" class="btn btn-small btn-primary" onClick={runTryIt}>Run</button>
+            <button type="button" class="btn btn-small btn-primary" onClick={runTryIt} disabled={tryRunning}>
+              {tryRunning ? "Running..." : "Run"}
+            </button>
           </div>
           {tryOut != null && <div class="mono" style={{ color: "var(--mint)", padding: "0 14px 12px" }}>{tryOut}</div>}
         </div>

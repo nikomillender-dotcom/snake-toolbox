@@ -65,7 +65,7 @@
           "conceptTags": ["print", "comments"],
           "strand": "core",
           "reviewable": false,
-          "body": "You can print more than once. Each print starts a fresh line on the stage, top to bottom, in the order you wrote them. Simple and predictable.\n\nThere is also a way to leave yourself a note that Python completely ignores: a comment. Put a # at the start, and everything after it on that line is just for humans. Python skips it.\n\nWhy leave notes in code the computer ignores? Same reason you write a sticky note on the fridge: future you will thank present you. Comments are how you explain WHY a line is there, so when you come back in three weeks you are not staring at a puzzle."
+          "body": "You can print as many times as you like. Each print starts a fresh line on the console, and they appear top to bottom in the order you wrote them. Predictable and simple.\n\nYou can also leave notes to yourself right in the code. They are called comments, and they start with the # symbol (say hash or pound). Everything after the # on a line is for humans only, and Python ignores it entirely when it runs. Why write lines the computer skips? The same reason you stick a note on the fridge: future you will thank present you. A good comment explains WHY a line is there, so when you come back weeks later you are not staring at a puzzle."
         },
         {
           "id": "m01-l2-s2",
@@ -73,7 +73,7 @@
           "conceptTags": ["print", "comments"],
           "strand": "core",
           "reviewable": false,
-          "prompt": "Run this. Notice the # line does nothing on screen.",
+          "prompt": "Run this. The first line starts with #, which makes it a comment: a note for humans that Python ignores completely (see, it prints nothing). Comments are how you remind future-you WHY a line is there. The two print lines below it run in order.",
           "code": "# This line is a note. Python ignores it.\nprint(\"Line one\")\nprint(\"Line two\")"
         },
         {
@@ -99,7 +99,7 @@
           "conceptTags": ["comments"],
           "strand": "core",
           "statTags": ["SYNTAX"],
-          "prompt": "Fill in the single character that starts a comment (a note Python ignores).",
+          "prompt": "You just saw it in the example above. Fill in the single character that starts a comment (a note Python ignores).",
           "expected": "#",
           "reviewable": true,
           "reviewForm": {
@@ -230,7 +230,7 @@
           "conceptTags": ["numbers", "input"],
           "strand": "debug",
           "statTags": ["DEBUG"],
-          "prompt": "This program wants to add 10 to whatever number the person types. But input() hands back a string, and gluing \"10\" onto text is not adding. Fix it so it does real math. The function total() should return the typed value plus 10.",
+          "prompt": "The code below sits inside a def, which is just a labeled box holding a mini-program (you will build these yourself in Module 6; for now, only change what is inside it). This box, total(), wants to add 10 to whatever number the person types. But input() hands back a string, and gluing \"10\" onto text is not adding. Fix it so it does real math: total() should give back the typed value plus 10.",
           "starterCode": "def total(typed):\n    # typed is what the person entered, like \"5\"\n    return typed + 10",
           "hiddenTests": [
             { "id": "m01-l4-s5-t1", "code": "assert total(\"5\") == 15", "message": "when the person types 5, the result should be the number 15, not glued-together text" },
@@ -267,7 +267,7 @@
           "conceptTags": ["print", "input", "strings"],
           "strand": "core",
           "reviewable": false,
-          "body": "You now have every piece you need for a tiny program that actually does something: print to speak, input to listen, and int()/str() to move between text and numbers.\n\nLet us stitch them into one small useful thing before the boss. No new ideas here, just you, combining what you already have. That combining move is the real skill, and it is exactly what the boss will ask for."
+          "body": "You now have every piece you need for a tiny program that actually does something: print to speak, input to listen, and int()/str() to move between text and numbers.\n\nOne quick word before you write your own box: a function hands its finished answer back with the word return. So return greeting means the box gives that value back to whoever used it (the full story is Module 6). For now, just put return in front of the value you want to hand back.\n\nLet us stitch it into one small useful thing. No new ideas here, just you combining what you already have. That combining move is the real skill, and it is exactly what the boss will ask for."
         },
         {
           "id": "m01-l5-s2",

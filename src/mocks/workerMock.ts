@@ -21,6 +21,11 @@ export interface MockWorkerOptions {
   inputCapable?: boolean;
   /** artificial per-event delay in ms, kept small so tests stay fast */
   delayMs?: number;
+  /** Manager fix round (item 4, boot diagnostics): simulate a boot that never reaches "ready" and
+   * instead reports fatal (loadPyodide throwing, or the F7 hash self-check failing, both real
+   * worker-entry.ts/pyodideEngine.ts paths that end up as a `fatal` message; this mock exists so
+   * App-level tests can drive that same outcome without a real Worker/Pyodide). */
+  bootFatal?: "oom" | "crash" | "unknown";
 }
 
 const FIXTURE_NAMES: Record<string, NameInfo[]> = {
@@ -36,7 +41,7 @@ const FIXTURE_NAMES: Record<string, NameInfo[]> = {
 /** Creates the scripted worker stand-in. Every screen talks to this through the same
  * `WorkerClient` shape the real composition root will hand them (I1 seam). */
 export function createMockWorkerClient(options: MockWorkerOptions = {}): WorkerClient {
-  const { inputCapable = true, delayMs = 12 } = options;
+  const { inputCapable = true, delayMs = 12, bootFatal } = options;
   const listeners = new Set<(msg: WorkerToMain) => void>();
   const namespaceNames = new Map<NamespaceId, NameInfo[]>([
     ["graded", []],
@@ -155,6 +160,10 @@ export function createMockWorkerClient(options: MockWorkerOptions = {}): WorkerC
     send(msg: MainToWorker) {
       switch (msg.t) {
         case "boot": {
+          if (bootFatal) {
+            after(() => emit({ t: "fatal", reason: bootFatal }));
+            return;
+          }
           const capable = inputCapable && msg.interruptBuffer !== null && msg.inputBuffer !== null;
           after(() => emit({ t: "ready", pyodideVersion: msg.pyodideVersion, inputCapable: capable }));
           return;

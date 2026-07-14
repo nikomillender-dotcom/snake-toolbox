@@ -57,7 +57,7 @@
           "conceptTags": ["strip", "replace", "string-methods"],
           "strand": "core",
           "reviewable": false,
-          "body": "Strings carry a toolbox of methods, called with a dot. The everyday ones:\n.upper() and .lower() change the case: \"Hi\".upper() is \"HI\".\n.strip() trims whitespace off both ends, a lifesaver for cleaning up typed input with stray spaces.\n.replace(old, new) swaps every occurrence of one piece of text for another.\n\nHere is the habit to build: every one of these hands you back a NEW string and leaves the original untouched (strings are immutable, remember). So you catch the result in a variable: clean = raw.strip(). You can also chain them left to right: raw.strip().lower() trims, then lowercases the trimmed result."
+          "body": "Strings carry a toolbox of methods, called with a dot. The everyday ones:\n.upper() and .lower() change the case: \"Hi\".upper() is \"HI\".\n.strip() trims whitespace off both ends, a lifesaver for cleaning up typed input with stray spaces.\n.replace(old, new) swaps every occurrence of one piece of text for another.\n.title() capitalizes the first letter of each word: \"the daily log\".title() is \"The Daily Log\".\n\nHere is the habit to build: every one of these hands you back a NEW string and leaves the original untouched (strings are immutable, remember). So you catch the result in a variable: clean = raw.strip(). You can also chain them left to right: raw.strip().lower() trims, then lowercases the trimmed result."
         },
         {
           "id": "m08-l2-s2",
