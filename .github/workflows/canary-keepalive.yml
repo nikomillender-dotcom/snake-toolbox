@@ -1,5 +1,7 @@
 name: canary-keepalive
 
+# (2026-07-14: this comment line touched once to force GitHub's workflow indexer to register the
+# file; it was pushed with the initial repo creation but never appeared in the workflows API.)
 # D2 (integration-overview.md I13). GitHub auto-DISABLES a scheduled workflow after 60 consecutive
 # days with no COMMIT activity in the repo, and the disable ALSO kills that file's
 # workflow_dispatch, so the manual "run now" fallback dies with the cron. Issues, tags, and merged
